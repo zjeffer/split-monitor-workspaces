@@ -111,7 +111,7 @@ The plugin provides drop-in replacements for workspace-related commands, to be a
 | movetoworkspace       | split-movetoworkspace         |
 | movetoworkspacesilent | split-movetoworkspacesilent   |
 
-These replacement commands also support passing `+x`/`-x` (`x: int`) to specify a workspace relative to the currently focused one, with the extra feature that they will wrap around. so when you get to the end and use `+1`, it will go to the first workspace. When you're at the first workspace and use `-1`, it will go to the last workspace.
+These replacement commands also support passing `+x`/`-x` (`x: int`) to specify a workspace relative to the currently focused one, with the extra feature that they will wrap around. so when you get to the end and use `+1`, it will go to the first workspace. When you're at the first workspace and use `-1`, it will go to the last workspace. Special relative arguments like `r+1`, `m+1`, ... will simply be passed to Hyprland as if they were used with the normal commands. If you want to use those arguments, there's no need to use the split- variants.
 
 If you set `enable_wrapping = false` in the plugin config, it will not wrap around and will just stop at the first or last workspace. So in this case if you specify +100, but you only have 10 workspaces, it will just go to the last workspace (10).
 

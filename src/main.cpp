@@ -255,7 +255,13 @@ static SDispatchResult splitWorkspace(const std::string& workspace)
     std::vector<SDispatchResult> results;
     for (const PHLMONITOR& monitor : g_pCompositor->m_monitors) {
         bool noFocus = monitor != getCurrentMonitor(); // only focus the current monitor
-        monitor->changeWorkspace(g_pCompositor->getWorkspaceByName(getWorkspaceFromMonitor(monitor, workspace)), false, true, noFocus);
+        auto workspaceRef = g_pCompositor->getWorkspaceByName(getWorkspaceFromMonitor(monitor, workspace));
+        if (workspaceRef.get() == nullptr) {
+            // create it if it doesn't exist yet
+            auto const workspaceID = getWorkspaceIDNameFromString(getWorkspaceFromMonitor(monitor, workspace)).id;
+            workspaceRef = g_pCompositor->createNewWorkspace(workspaceID, monitor->m_id);
+        }
+        monitor->changeWorkspace(workspaceRef, false, true, noFocus);
     }
     return {.success = true, .error = ""};
 }
@@ -298,7 +304,13 @@ static SDispatchResult cycleWorkspaces(const std::string& value, bool nowrap = f
             }
             index = 0; // wrap around to the first workspace
         }
-        monitor->changeWorkspace(g_pCompositor->getWorkspaceByName(workspaces[index]), false, true, monitor != getCurrentMonitor());
+        auto workspaceRef = g_pCompositor->getWorkspaceByName(workspaces[index]);
+        if (workspaceRef.get() == nullptr) {
+            // create it if it doesn't exist yet
+            auto const workspaceID = getWorkspaceIDNameFromString(workspaces[index]).id;
+            workspaceRef = g_pCompositor->createNewWorkspace(workspaceID, monitor->m_id);
+        }
+        monitor->changeWorkspace(workspaceRef, false, true, monitor != getCurrentMonitor());
     }
     return {.success = true, .error = ""};
 }

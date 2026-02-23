@@ -7,7 +7,7 @@
 #include <hyprland/src/desktop/Workspace.hpp>
 #include <hyprland/src/desktop/state/FocusState.hpp>
 #include <hyprland/src/helpers/Color.hpp>
-#include <hyprland/src/managers/KeybindManager.hpp>
+#include <hyprland/src/event/EventBus.hpp>
 #include <hyprutils/memory/SharedPtr.hpp>
 
 #include "globals.hpp"
@@ -61,10 +61,10 @@ struct MonitorConfigValue {
 static std::map<std::string, MonitorConfigValue> g_vMonitorPriorities;
 static std::map<std::string, MonitorConfigValue> g_vMonitorMaxWorkspaces;
 
-static SP<HOOK_CALLBACK_FN> e_monitorAddedHandle = nullptr;
-static SP<HOOK_CALLBACK_FN> e_monitorRemovedHandle = nullptr;
-static SP<HOOK_CALLBACK_FN> e_configReloadedHandle = nullptr;
-static SP<HOOK_CALLBACK_FN> e_preConfigReloadHandle = nullptr;
+static CHyprSignalListener e_monitorAddedHandle = nullptr;
+static CHyprSignalListener e_monitorRemovedHandle = nullptr;
+static CHyprSignalListener e_configReloadedHandle = nullptr;
+static CHyprSignalListener e_preConfigReloadHandle = nullptr;
 
 static void raiseNotification(const std::string& message, float timeout = 5000.0F)
 {
@@ -613,9 +613,8 @@ static void reload()
     g_firstLoad = false;
 }
 
-static void monitorAddedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any param)
+static void monitorAddedCallback(const PHLMONITOR& monitor)
 { // NOLINT(performance-unnecessary-value-param)
-    auto monitor = std::any_cast<PHLMONITOR>(param);
     if (monitor == nullptr) {
         Log::logger->log(Log::WARN, "[split-monitor-workspaces] Monitor added callback called with nullptr?");
         return;
@@ -623,9 +622,8 @@ static void monitorAddedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, st
     mapMonitor(monitor);
 }
 
-static void monitorRemovedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any param) // NOLINT(performance-unnecessary-value-param)
+static void monitorRemovedCallback(PHLMONITOR monitor) // NOLINT(performance-unnecessary-value-param)
 {
-    auto monitor = std::any_cast<PHLMONITOR>(param);
     if (monitor == nullptr) {
         Log::logger->log(Log::WARN, "[split-monitor-workspaces] Monitor removed callback called with nullptr?");
         return;
@@ -633,7 +631,7 @@ static void monitorRemovedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, 
     unmapMonitor(monitor);
 }
 
-static void configReloadedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any /*unused*/) // NOLINT(performance-unnecessary-value-param)
+static void configReloadedCallback() // NOLINT(performance-unnecessary-value-param)
 {
     // !!! anything you call in this function should not reload the config, as it will cause an infinite loop !!!
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Config reloaded");
@@ -641,7 +639,7 @@ static void configReloadedCallback(void* /*unused*/, SCallbackInfo& /*unused*/, 
     reload();
 }
 
-static void preConfigReloadCallback(void* /*unused*/, SCallbackInfo& /*unused*/, std::any /*unused*/) // NOLINT(performance-unnecessary-value-param)
+static void preConfigReloadCallback() // NOLINT(performance-unnecessary-value-param)
 {
     // clear monitor-specific config values. This is needed if the user
     // removes monitor_priority or monitor_max_workspaces entries from
@@ -727,10 +725,10 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-changemonitorsilent", splitChangeMonitorSilent);
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-grabroguewindows", grabRogueWindows);
 
-    e_monitorAddedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "monitorAdded", monitorAddedCallback);
-    e_monitorRemovedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "monitorRemoved", monitorRemovedCallback);
-    e_configReloadedHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "configReloaded", configReloadedCallback);
-    e_preConfigReloadHandle = HyprlandAPI::registerCallbackDynamic(PHANDLE, "preConfigReload", preConfigReloadCallback);
+    e_monitorAddedHandle = Event::bus()->m_events.monitor.added.listen(monitorAddedCallback);
+    e_monitorRemovedHandle = Event::bus()->m_events.monitor.removed.listen(monitorRemovedCallback);
+    e_configReloadedHandle = Event::bus()->m_events.config.reloaded.listen(configReloadedCallback);
+    e_preConfigReloadHandle = Event::bus()->m_events.config.reloaded.listen(preConfigReloadCallback);
 
     // config loading and initial mapping of the workspaces will happen after plugin initialization, through the configReloadedCallback.
     // this is because Hyprland will automatically force a config reload after the plugin is loaded

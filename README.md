@@ -1,6 +1,6 @@
 # split-monitor-workspaces
-[![Build](https://github.com/Duckonaut/split-monitor-workspaces/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/Duckonaut/split-monitor-workspaces/actions/workflows/main.yml)
-[![Build on latest Hyprland release](https://github.com/Duckonaut/split-monitor-workspaces/actions/workflows/release.yml/badge.svg)](https://github.com/Duckonaut/split-monitor-workspaces/actions/workflows/release.yml)
+[![Build](https://github.com/zjeffer/split-monitor-workspaces/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/zjeffer/split-monitor-workspaces/actions/workflows/main.yml)
+[![Build on latest Hyprland release](https://github.com/zjeffer/split-monitor-workspaces/actions/workflows/release.yml/badge.svg)](https://github.com/zjeffer/split-monitor-workspaces/actions/workflows/release.yml)
 
 
 A small plugin to provide `awesome`/`dwm`-like behavior with workspaces: split them between monitors and provide independent numbering
@@ -13,7 +13,7 @@ A small plugin to provide `awesome`/`dwm`-like behavior with workspaces: split t
 ## Using [hyprpm](https://wiki.hyprland.org/Plugins/Using-Plugins/#hyprpm)
 Hyprpm is a tool integrated with the latest Hyprland version, to use it first you'll need to add the repository and then enable the plugin
 ```BASH
-hyprpm add https://github.com/Duckonaut/split-monitor-workspaces # Add the plugin repository
+hyprpm add https://github.com/zjeffer/split-monitor-workspaces # Add the plugin repository
 hyprpm enable split-monitor-workspaces # Enable the plugin
 hyprpm reload # Reload the plugins
 ```
@@ -53,7 +53,7 @@ With flakes enabled, a sample installation will look like this:
 
     hyprland.url = "github:hyprwm/Hyprland";
     split-monitor-workspaces = {
-      url = "github:Duckonaut/split-monitor-workspaces";
+      url = "github:zjeffer/split-monitor-workspaces";
       inputs.hyprland.follows = "hyprland"; # <- make sure this line is present for the plugin to work as intended
     };
   };
@@ -199,7 +199,7 @@ bind = $mainMod SHIFT, 5, split-movetoworkspacesilent, 5
 
 #### Omarchy compatibility
 
-For Omarchy installations, make sure you first unbind Omarchy's keybindings by putting the following above your own keybindings (see [this comment](https://github.com/Duckonaut/split-monitor-workspaces/issues/203#issuecomment-3426554922) for more details):
+For Omarchy installations, make sure you first unbind Omarchy's keybindings by putting the following above your own keybindings (see [this comment](https://github.com/zjeffer/split-monitor-workspaces/issues/203#issuecomment-3426554922) for more details):
 
 ```
 # Unbind Omarchy workspace bindings

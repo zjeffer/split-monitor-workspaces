@@ -728,7 +728,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     e_monitorAddedHandle = Event::bus()->m_events.monitor.added.listen(monitorAddedCallback);
     e_monitorRemovedHandle = Event::bus()->m_events.monitor.removed.listen(monitorRemovedCallback);
     e_configReloadedHandle = Event::bus()->m_events.config.reloaded.listen(configReloadedCallback);
-    e_preConfigReloadHandle = Event::bus()->m_events.config.reloaded.listen(preConfigReloadCallback);
+    e_preConfigReloadHandle = Event::bus()->m_events.config.preReload.listen(preConfigReloadCallback);
 
     // config loading and initial mapping of the workspaces will happen after plugin initialization, through the configReloadedCallback.
     // this is because Hyprland will automatically force a config reload after the plugin is loaded

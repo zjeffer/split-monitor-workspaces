@@ -6,9 +6,11 @@
 #include <hyprland/src/debug/log/Logger.hpp>
 #include <hyprland/src/desktop/Workspace.hpp>
 #include <hyprland/src/desktop/state/FocusState.hpp>
-#include <hyprland/src/helpers/Color.hpp>
 #include <hyprland/src/event/EventBus.hpp>
+#include <hyprland/src/helpers/Color.hpp>
+#include <hyprland/src/helpers/Monitor.hpp>
 #include <hyprutils/memory/SharedPtr.hpp>
+#include <hyprutils/string/VarList2.hpp>
 
 #include "globals.hpp"
 
@@ -450,7 +452,7 @@ static int64_t calcWorkspaceBaseIndex(const std::string& name)
 
 static void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-member-functions-to-static)
 {
-    if (monitor->m_activeMonitorRule.disabled) {
+    if (monitor->m_activeMonitorRule.m_disabled) {
         Log::logger->log(Log::INFO, "[split-monitor-workspaces] Skipping disabled monitor {}", monitor->m_name);
         return;
     }
@@ -650,12 +652,12 @@ static void preConfigReloadCallback() // NOLINT(performance-unnecessary-value-pa
 
 static Hyprlang::CParseResult monitorPriorityConfigHandler(const char* command, const char* args)
 {
-    const auto ARGS = CVarList(args);
+    const auto ARGS = Hyprutils::String::CVarList2(args);
 
     int64_t priorityCounter = 0;
     for (const auto& arg : ARGS) {
-        Log::logger->log(Log::INFO, "[split-monitor-workspaces] Setting monitor priority: {} -> {}", arg.c_str(), priorityCounter);
-        g_vMonitorPriorities[arg] = {.value = priorityCounter, .wasSetFromConfig = true};
+        Log::logger->log(Log::INFO, "[split-monitor-workspaces] Setting monitor priority: {} -> {}", arg, priorityCounter);
+        g_vMonitorPriorities[std::string(arg)] = {.value = priorityCounter, .wasSetFromConfig = true};
         priorityCounter++;
     }
 
@@ -665,7 +667,7 @@ static Hyprlang::CParseResult monitorPriorityConfigHandler(const char* command, 
 
 static Hyprlang::CParseResult monitorMaxWorkspacesConfigHandler(const char* command, const char* args)
 {
-    const auto ARGS = CVarList(args);
+    const auto ARGS = Hyprutils::String::CVarList2(args);
 
     if (ARGS.size() != 2) {
         Hyprlang::CParseResult result;
@@ -678,8 +680,8 @@ static Hyprlang::CParseResult monitorMaxWorkspacesConfigHandler(const char* comm
     std::string parseError;
 
     try {
-        const std::string monitorName = ARGS[0];
-        const int maxWorkspaces = std::stoi(ARGS[1]);
+        auto const monitorName = std::string(ARGS[0]);
+        const int maxWorkspaces = std::stoi(std::string(ARGS[1]));
 
         Log::logger->log(Log::INFO, "[split-monitor-workspaces] Setting monitor max workspaces: {} -> {}", monitorName.c_str(), maxWorkspaces);
         g_vMonitorMaxWorkspaces[monitorName] = {.value = maxWorkspaces, .wasSetFromConfig = true};

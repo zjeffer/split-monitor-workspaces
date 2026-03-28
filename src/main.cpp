@@ -452,7 +452,7 @@ static int64_t calcWorkspaceBaseIndex(const std::string& name)
 
 static void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-member-functions-to-static)
 {
-    if (monitor->m_activeMonitorRule.m_disabled) {
+    if (monitor->m_activeMonitorRule.disabled) {
         Log::logger->log(Log::INFO, "[split-monitor-workspaces] Skipping disabled monitor {}", monitor->m_name);
         return;
     }

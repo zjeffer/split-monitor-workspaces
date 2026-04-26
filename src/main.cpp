@@ -452,7 +452,7 @@ static int64_t calcWorkspaceBaseIndex(const std::string& name)
 
 static void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-member-functions-to-static)
 {
-    if (monitor->m_activeMonitorRule.disabled) {
+    if (monitor->m_activeMonitorRule.m_disabled) {
         Log::logger->log(Log::INFO, "[split-monitor-workspaces] Skipping disabled monitor {}", monitor->m_name);
         return;
     }
@@ -617,36 +617,20 @@ static void reload()
 
 static void monitorAddedCallback(const PHLMONITOR& monitor)
 { // NOLINT(performance-unnecessary-value-param)
-    try {
-        if (monitor == nullptr) {
-            Log::logger->log(Log::WARN, "[split-monitor-workspaces] Monitor added callback called with nullptr?");
-            return;
-        }
-        mapMonitor(monitor);
+    if (monitor == nullptr) {
+        Log::logger->log(Log::WARN, "[split-monitor-workspaces] Monitor added callback called with nullptr?");
+        return;
     }
-    catch (const std::exception& e) {
-        Log::logger->log(Log::ERR, "[split-monitor-workspaces] Exception in monitor added callback: {}", e.what());
-    }
-    catch (...) {
-        Log::logger->log(Log::ERR, "[split-monitor-workspaces] Unknown exception in monitor added callback");
-    }
+    mapMonitor(monitor);
 }
 
 static void monitorRemovedCallback(PHLMONITOR monitor) // NOLINT(performance-unnecessary-value-param)
 {
-    try {
-        if (monitor == nullptr) {
-            Log::logger->log(Log::WARN, "[split-monitor-workspaces] Monitor removed callback called with nullptr?");
-            return;
-        }
-        unmapMonitor(monitor);
+    if (monitor == nullptr) {
+        Log::logger->log(Log::WARN, "[split-monitor-workspaces] Monitor removed callback called with nullptr?");
+        return;
     }
-    catch (const std::exception& e) {
-        Log::logger->log(Log::ERR, "[split-monitor-workspaces] Exception in monitor removed callback: {}", e.what());
-    }
-    catch (...) {
-        Log::logger->log(Log::ERR, "[split-monitor-workspaces] Unknown exception in monitor removed callback");
-    }
+    unmapMonitor(monitor);
 }
 
 static void configReloadedCallback() // NOLINT(performance-unnecessary-value-param)
@@ -672,13 +656,8 @@ static void preConfigReloadCallback() // NOLINT(performance-unnecessary-value-pa
     // clear monitor-specific config values. This is needed if the user
     // removes monitor_priority or monitor_max_workspaces entries from
     // the config. Without this, the old values would persist.
-    try {
-        g_vMonitorPriorities.clear();
-        g_vMonitorMaxWorkspaces.clear();
-    }
-    catch (...) {
-        Log::logger->log(Log::ERR, "[split-monitor-workspaces] Exception during pre-config reload");
-    }
+    g_vMonitorPriorities.clear();
+    g_vMonitorMaxWorkspaces.clear();
 }
 
 static Hyprlang::CParseResult monitorPriorityConfigHandler(const char* command, const char* args)

@@ -41,7 +41,7 @@
           ++ hyprland.packages.${system}.hyprland.buildInputs;
 
         meta = with pkgs.lib; {
-          homepage = "https://github.com/Duckonaut/split-monitor-workspaces";
+          homepage = "https://github.com/zjeffer/split-monitor-workspaces";
           description = "A small Hyprland plugin to provide awesome-like workspace behavior";
           license = licenses.bsd3;
           platforms = platforms.linux;

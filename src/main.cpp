@@ -736,7 +736,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     // this is because Hyprland will automatically force a config reload after the plugin is loaded
 
     raiseNotification("[split-monitor-workspaces] Initialized successfully!");
-    return {"split-monitor-workspaces", "Split monitor workspace namespaces", "Duckonaut", "1.2.0"};
+    return {"split-monitor-workspaces", "Split monitor workspace namespaces", "zjeffer", "1.2.0"};
 }
 
 APICALL EXPORT void PLUGIN_EXIT()

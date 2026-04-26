@@ -44,7 +44,7 @@ commit_pins = [
 
 [split-monitor-workspaces]
 description = "Split monitor workspaces"
-authors = ["Duckonaut"]
+authors = ["Duckonaut", "zjeffer"]
 output = "build/libsplit-monitor-workspaces.so"
 build = [
     "meson setup build --wipe",

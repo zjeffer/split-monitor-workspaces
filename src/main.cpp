@@ -9,6 +9,7 @@
 #include <hyprland/src/event/EventBus.hpp>
 #include <hyprland/src/helpers/Color.hpp>
 #include <hyprland/src/helpers/Monitor.hpp>
+#include <hyprland/src/managers/KeybindManager.hpp>
 #include <hyprutils/memory/SharedPtr.hpp>
 #include <hyprutils/string/VarList2.hpp>
 
@@ -93,9 +94,8 @@ static bool isHy3Available()
     if (g_hy3Status == Hy3Status::DETECTED)
         return true;
 
-    // lazy detection: check if the hy3 plugin is loaded by querying the plugin list
-    auto const pluginList = HyprlandAPI::invokeHyprctlCommand("plugin", "list");
-    if (pluginList.find("hy3") != std::string::npos) {
+    // detection: check if the hy3 plugin registered its dispatcher
+    if (g_pKeybindManager->m_dispatchers.contains("hy3:movetoworkspace")) {
         g_hy3Status = Hy3Status::DETECTED;
         Log::logger->log(Log::INFO, "[split-monitor-workspaces] hy3 plugin detected, using hy3 dispatchers for move operations");
         return true;

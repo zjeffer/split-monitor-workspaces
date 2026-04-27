@@ -105,20 +105,18 @@ static bool isHy3Available()
     return false;
 }
 
-static std::string dispatchMoveToWorkspace(const std::string& workspaceName)
+static std::string dispatchMoveToWorkspace(const std::string& workspaceName, bool silent)
 {
     if (isHy3Available()) {
+        if (silent) {
+            return HyprlandAPI::invokeHyprctlCommand("dispatch", "hy3:movetoworkspace " + workspaceName);
+        }
         return HyprlandAPI::invokeHyprctlCommand("dispatch", "hy3:movetoworkspace " + workspaceName + ",follow");
     }
-    return HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspace " + workspaceName);
-}
-
-static std::string dispatchMoveToWorkspaceSilent(const std::string& workspaceName)
-{
-    if (isHy3Available()) {
-        return HyprlandAPI::invokeHyprctlCommand("dispatch", "hy3:movetoworkspace " + workspaceName);
+    if (silent) {
+        return HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspacesilent " + workspaceName);
     }
-    return HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspacesilent " + workspaceName);
+    return HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspace " + workspaceName);
 }
 
 // avoid default initialization with []
@@ -379,18 +377,18 @@ static SDispatchResult splitMoveToWorkspace(const std::string& workspace)
 {
     if (!g_linkMonitors) {
         // not linked => just move to workspace on current monitor
-        auto const result = dispatchMoveToWorkspace(getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
+        auto const result = dispatchMoveToWorkspace(getWorkspaceFromMonitor(getCurrentMonitor(), workspace), false);
         return {.success = result == "ok", .error = result};
     }
     // workspaces are linked => silently move to workspace, then change workspace on all monitors
-    auto const result = dispatchMoveToWorkspaceSilent(getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
+    auto const result = dispatchMoveToWorkspace(getWorkspaceFromMonitor(getCurrentMonitor(), workspace), true);
     splitWorkspace(workspace);
     return {.success = result == "ok", .error = result};
 }
 
 static SDispatchResult splitMoveToWorkspaceSilent(const std::string& workspace)
 {
-    auto const result = dispatchMoveToWorkspaceSilent(getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
+    auto const result = dispatchMoveToWorkspace(getWorkspaceFromMonitor(getCurrentMonitor(), workspace), true);
     return {.success = result == "ok", .error = result};
 }
 
@@ -430,10 +428,10 @@ static SDispatchResult changeMonitor(bool quiet, const std::string& value)
 
     std::string result;
     if (quiet) {
-        result = dispatchMoveToWorkspaceSilent(std::to_string(nextWorkspaceID));
+        result = dispatchMoveToWorkspace(std::to_string(nextWorkspaceID), true);
     }
     else {
-        result = dispatchMoveToWorkspace(std::to_string(nextWorkspaceID));
+        result = dispatchMoveToWorkspace(std::to_string(nextWorkspaceID), false);
     }
     return {.success = result == "ok", .error = result};
 }

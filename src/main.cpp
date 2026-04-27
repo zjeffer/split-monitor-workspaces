@@ -38,9 +38,15 @@ static bool g_enablePersistentWorkspaces = true;
 static bool g_enableWrapping = true;
 static std::string g_defaultMonitor = "";
 static bool g_linkMonitors = false;
-static bool g_enableHy3 = true;
-static bool g_hy3Available = false;
-static bool g_hy3Detected = false; // whether detection has been performed
+
+// Hy3 explicit support
+enum class Hy3Status {
+    DISABLED,          // disabled in config
+    DETECTION_PENDING, // not yet performed
+    NOT_DETECTED,      // detection failed
+    DETECTED,          // detection succeeded
+};
+static Hy3Status g_hy3Status = Hy3Status::DETECTION_PENDING;
 
 // the first time we load the plugin, we want to switch to the first workspace on the primary monitor regardless of keepFocused
 static bool g_firstLoad = true;
@@ -81,22 +87,22 @@ static void raiseNotification(const std::string& message, float timeout = 5000.0
 
 static bool isHy3Available()
 {
-    if (!g_enableHy3)
+    if (g_hy3Status == Hy3Status::DISABLED || g_hy3Status == Hy3Status::NOT_DETECTED)
         return false;
 
-    if (g_hy3Detected)
-        return g_hy3Available;
+    if (g_hy3Status == Hy3Status::DETECTED)
+        return true;
 
     // lazy detection: check if the hy3 plugin is loaded by querying the plugin list
     auto const pluginList = HyprlandAPI::invokeHyprctlCommand("plugin", "list");
-    g_hy3Available = pluginList.find("hy3") != std::string::npos;
-    g_hy3Detected = true;
-
-    if (g_hy3Available) {
+    if (pluginList.find("hy3") != std::string::npos) {
+        g_hy3Status = Hy3Status::DETECTED;
         Log::logger->log(Log::INFO, "[split-monitor-workspaces] hy3 plugin detected, using hy3 dispatchers for move operations");
+        return true;
     }
 
-    return g_hy3Available;
+    g_hy3Status = Hy3Status::NOT_DETECTED;
+    return false;
 }
 
 static std::string dispatchMoveToWorkspace(const std::string& workspaceName)
@@ -641,8 +647,12 @@ static void loadConfigValues()
     g_enableWrapping = getConfigValue<Hyprlang::INT>(k_enableWrapping) != 0;
     g_defaultMonitor = getConfigValue<Hyprlang::STRING>(k_defaultMonitor);
     g_linkMonitors = getConfigValue<Hyprlang::INT>(k_linkMonitors) != 0;
-    g_enableHy3 = getConfigValue<Hyprlang::INT>(k_enableHy3) != 0;
-    g_hy3Detected = false; // reset detection so it re-checks on next use
+    if (getConfigValue<Hyprlang::INT>(k_enableHy3) != 0) {
+        g_hy3Status = Hy3Status::DETECTION_PENDING; // reset so it re-checks on next use
+    }
+    else {
+        g_hy3Status = Hy3Status::DISABLED;
+    }
     Log::logger->log(Log::INFO,
                      "[split-monitor-workspaces] Config values loaded: workspaceCount={}, keepFocused={}, enableNotifications={}, enablePersistentWorkspaces={}, enableWrapping={}, "
                      "defaultMonitor='{}', linkMonitors={}",

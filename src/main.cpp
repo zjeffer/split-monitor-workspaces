@@ -27,6 +27,7 @@ auto constexpr k_defaultMonitor = "cursor:default_monitor";
 auto constexpr k_monitorPriority = "plugin:split-monitor-workspaces:monitor_priority";
 auto constexpr k_monitorMaxWorkspaces = "plugin:split-monitor-workspaces:max_workspaces";
 auto constexpr k_linkMonitors = "plugin:split-monitor-workspaces:link_monitors";
+auto constexpr k_enableHy3 = "plugin:split-monitor-workspaces:enable_hy3";
 
 static const CHyprColor s_pluginColor = {0x61 / 255.0F, 0xAF / 255.0F, 0xEF / 255.0F, 1.0F};
 
@@ -37,6 +38,9 @@ static bool g_enablePersistentWorkspaces = true;
 static bool g_enableWrapping = true;
 static std::string g_defaultMonitor = "";
 static bool g_linkMonitors = false;
+static bool g_enableHy3 = true;
+static bool g_hy3Available = false;
+static bool g_hy3Detected = false; // whether detection has been performed
 
 // the first time we load the plugin, we want to switch to the first workspace on the primary monitor regardless of keepFocused
 static bool g_firstLoad = true;
@@ -73,6 +77,42 @@ static void raiseNotification(const std::string& message, float timeout = 5000.0
     if (g_enableNotifications) {
         HyprlandAPI::addNotification(PHANDLE, message, s_pluginColor, timeout);
     }
+}
+
+static bool isHy3Available()
+{
+    if (!g_enableHy3)
+        return false;
+
+    if (g_hy3Detected)
+        return g_hy3Available;
+
+    // lazy detection: check if the hy3 plugin is loaded by querying the plugin list
+    auto const pluginList = HyprlandAPI::invokeHyprctlCommand("plugin", "list");
+    g_hy3Available = pluginList.find("hy3") != std::string::npos;
+    g_hy3Detected = true;
+
+    if (g_hy3Available) {
+        Log::logger->log(Log::INFO, "[split-monitor-workspaces] hy3 plugin detected, using hy3 dispatchers for move operations");
+    }
+
+    return g_hy3Available;
+}
+
+static std::string dispatchMoveToWorkspace(const std::string& workspaceName)
+{
+    if (isHy3Available()) {
+        return HyprlandAPI::invokeHyprctlCommand("dispatch", "hy3:movetoworkspace " + workspaceName + ",follow");
+    }
+    return HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspace " + workspaceName);
+}
+
+static std::string dispatchMoveToWorkspaceSilent(const std::string& workspaceName)
+{
+    if (isHy3Available()) {
+        return HyprlandAPI::invokeHyprctlCommand("dispatch", "hy3:movetoworkspace " + workspaceName);
+    }
+    return HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspacesilent " + workspaceName);
 }
 
 // avoid default initialization with []
@@ -333,18 +373,18 @@ static SDispatchResult splitMoveToWorkspace(const std::string& workspace)
 {
     if (!g_linkMonitors) {
         // not linked => just move to workspace on current monitor
-        auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspace " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
+        auto const result = dispatchMoveToWorkspace(getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
         return {.success = result == "ok", .error = result};
     }
     // workspaces are linked => silently move to workspace, then change workspace on all monitors
-    auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspacesilent " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
+    auto const result = dispatchMoveToWorkspaceSilent(getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
     splitWorkspace(workspace);
     return {.success = result == "ok", .error = result};
 }
 
 static SDispatchResult splitMoveToWorkspaceSilent(const std::string& workspace)
 {
-    auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspacesilent " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
+    auto const result = dispatchMoveToWorkspaceSilent(getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
     return {.success = result == "ok", .error = result};
 }
 
@@ -384,10 +424,10 @@ static SDispatchResult changeMonitor(bool quiet, const std::string& value)
 
     std::string result;
     if (quiet) {
-        result = HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspacesilent " + std::to_string(nextWorkspaceID));
+        result = dispatchMoveToWorkspaceSilent(std::to_string(nextWorkspaceID));
     }
     else {
-        result = HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspace " + std::to_string(nextWorkspaceID));
+        result = dispatchMoveToWorkspace(std::to_string(nextWorkspaceID));
     }
     return {.success = result == "ok", .error = result};
 }
@@ -601,6 +641,8 @@ static void loadConfigValues()
     g_enableWrapping = getConfigValue<Hyprlang::INT>(k_enableWrapping) != 0;
     g_defaultMonitor = getConfigValue<Hyprlang::STRING>(k_defaultMonitor);
     g_linkMonitors = getConfigValue<Hyprlang::INT>(k_linkMonitors) != 0;
+    g_enableHy3 = getConfigValue<Hyprlang::INT>(k_enableHy3) != 0;
+    g_hy3Detected = false; // reset detection so it re-checks on next use
     Log::logger->log(Log::INFO,
                      "[split-monitor-workspaces] Config values loaded: workspaceCount={}, keepFocused={}, enableNotifications={}, enablePersistentWorkspaces={}, enableWrapping={}, "
                      "defaultMonitor='{}', linkMonitors={}",
@@ -717,6 +759,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     HyprlandAPI::addConfigKeyword(PHANDLE, k_monitorPriority, monitorPriorityConfigHandler, (Hyprlang::SHandlerOptions){.allowFlags = false});
     HyprlandAPI::addConfigKeyword(PHANDLE, k_monitorMaxWorkspaces, monitorMaxWorkspacesConfigHandler, (Hyprlang::SHandlerOptions){.allowFlags = false});
     HyprlandAPI::addConfigValue(PHANDLE, k_linkMonitors, Hyprlang::INT{0});
+    HyprlandAPI::addConfigValue(PHANDLE, k_enableHy3, Hyprlang::INT{1});
 
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-workspace", splitWorkspace);
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-cycleworkspaces", splitCycleWorkspaces);

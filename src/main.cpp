@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <hyprland/src/Compositor.hpp>
 #include <hyprland/src/config/ConfigManager.hpp>
+#include <hyprland/src/config/lua/bindings/LuaBindingsInternal.hpp>
+#include <hyprland/src/config/values/ConfigValues.hpp>
 #include <hyprland/src/debug/log/Logger.hpp>
 #include <hyprland/src/desktop/Workspace.hpp>
 #include <hyprland/src/desktop/state/FocusState.hpp>
@@ -12,12 +14,15 @@
 #include <hyprland/src/managers/KeybindManager.hpp>
 #include <hyprutils/memory/SharedPtr.hpp>
 #include <hyprutils/string/VarList2.hpp>
+#include <hyprutils/utils/ScopeGuard.hpp>
 
 #include "globals.hpp"
 
 #include <map>
 #include <unistd.h>
 #include <vector>
+
+namespace {
 
 auto constexpr k_workspaceCount = "plugin:split-monitor-workspaces:count";
 auto constexpr k_keepFocused = "plugin:split-monitor-workspaces:keep_focused";
@@ -30,30 +35,40 @@ auto constexpr k_monitorMaxWorkspaces = "plugin:split-monitor-workspaces:max_wor
 auto constexpr k_linkMonitors = "plugin:split-monitor-workspaces:link_monitors";
 auto constexpr k_enableHy3 = "plugin:split-monitor-workspaces:enable_hy3";
 
-static const CHyprColor s_pluginColor = {0x61 / 255.0F, 0xAF / 255.0F, 0xEF / 255.0F, 1.0F};
+const CHyprColor s_pluginColor = {0x61 / 255.0F, 0xAF / 255.0F, 0xEF / 255.0F, 1.0F};
 
-static int g_workspaceCount;
-static bool g_keepFocused = false;
-static bool g_enableNotifications = false;
-static bool g_enablePersistentWorkspaces = true;
-static bool g_enableWrapping = true;
-static std::string g_defaultMonitor = "";
-static bool g_linkMonitors = false;
+struct {
+    SP<Config::Values::CIntValue> workspaceCount;
+    SP<Config::Values::CIntValue> keepFocused;
+    SP<Config::Values::CIntValue> enableNotifications;
+    SP<Config::Values::CIntValue> enablePersistentWorkspaces;
+    SP<Config::Values::CIntValue> enableWrapping;
+    SP<Config::Values::CIntValue> linkMonitors;
+    SP<Config::Values::CIntValue> enableHy3;
+} g_config;
+
+int g_workspaceCount;
+bool g_keepFocused = false;
+bool g_enableNotifications = false;
+bool g_enablePersistentWorkspaces = true;
+bool g_enableWrapping = true;
+std::string g_defaultMonitor = "";
+bool g_linkMonitors = false;
 
 // Hy3 explicit support
-enum class Hy3Status {
+enum class Hy3Status : uint8_t {
     DISABLED,          // disabled in config
     DETECTION_PENDING, // not yet performed
     NOT_DETECTED,      // detection failed
     DETECTED,          // detection succeeded
 };
-static Hy3Status g_hy3Status = Hy3Status::DETECTION_PENDING;
+Hy3Status g_hy3Status = Hy3Status::DETECTION_PENDING;
 
 // the first time we load the plugin, we want to switch to the first workspace on the primary monitor regardless of keepFocused
-static bool g_firstLoad = true;
+bool g_firstLoad = true;
 
-static std::map<MONITORID, std::vector<std::string>> g_vMonitorWorkspaceMap;
-static std::vector<PHLWORKSPACE> g_vPersistentWorkspaces; // to keep ownership of persistent workspaces, otherwise Hyprland will remove them
+std::map<MONITORID, std::vector<std::string>> g_vMonitorWorkspaceMap;
+std::vector<PHLWORKSPACE> g_vPersistentWorkspaces; // to keep ownership of persistent workspaces, otherwise Hyprland will remove them
 
 struct MonitorConfigValue {
     int64_t value = 0;
@@ -71,22 +86,22 @@ struct MonitorConfigValue {
     }
 };
 
-static std::map<std::string, MonitorConfigValue> g_vMonitorPriorities;
-static std::map<std::string, MonitorConfigValue> g_vMonitorMaxWorkspaces;
+std::map<std::string, MonitorConfigValue> g_vMonitorPriorities;
+std::map<std::string, MonitorConfigValue> g_vMonitorMaxWorkspaces;
 
-static CHyprSignalListener e_monitorAddedHandle = nullptr;
-static CHyprSignalListener e_monitorRemovedHandle = nullptr;
-static CHyprSignalListener e_configReloadedHandle = nullptr;
-static CHyprSignalListener e_preConfigReloadHandle = nullptr;
+CHyprSignalListener e_monitorAddedHandle = nullptr;
+CHyprSignalListener e_monitorRemovedHandle = nullptr;
+CHyprSignalListener e_configReloadedHandle = nullptr;
+CHyprSignalListener e_preConfigReloadHandle = nullptr;
 
-static void raiseNotification(const std::string& message, float timeout = 5000.0F)
+void raiseNotification(const std::string& message, float timeout = 5000.0F)
 {
     if (g_enableNotifications) {
         HyprlandAPI::addNotification(PHANDLE, message, s_pluginColor, timeout);
     }
 }
 
-static bool isHy3Available()
+bool isHy3Available()
 {
     if (g_hy3Status == Hy3Status::DISABLED || g_hy3Status == Hy3Status::NOT_DETECTED)
         return false;
@@ -105,7 +120,7 @@ static bool isHy3Available()
     return false;
 }
 
-static std::string dispatchMoveToWorkspace(const std::string& workspaceName, bool silent)
+std::string dispatchMoveToWorkspace(const std::string& workspaceName, bool silent)
 {
     if (isHy3Available()) {
         if (silent) {
@@ -125,7 +140,7 @@ int64_t getMonitorMaxWorkspaces(const std::string& name)
     return g_vMonitorMaxWorkspaces.contains(name) ? g_vMonitorMaxWorkspaces[name] : g_workspaceCount;
 }
 
-static int getDelta(const std::string& direction)
+int getDelta(const std::string& direction)
 {
     if (direction == "next")
         return 1;
@@ -142,40 +157,7 @@ static int getDelta(const std::string& direction)
     return 0;
 }
 
-template <typename T> static auto getConfigValue(const char* paramName)
-{
-    /*
-    From the Hyprland source code:
-    > For all types except STRING typeof(**retval) is the config value type (e.g. INT or FLOAT)
-    > Please note STRING is a special type and instead of
-    > typeof(**retval) being const char*, typeof(\*retval) is a const char*.
-    */
-    Log::logger->log(Log::INFO, "[split-monitor-workspaces] Getting config value {}", paramName);
-
-    if constexpr (std::is_same_v<T, Hyprlang::STRING>) {
-        const auto* const paramPtr = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, paramName)->getDataStaticPtr();
-        if (paramPtr == nullptr) {
-            Log::logger->log(Log::WARN, "[split-monitor-workspaces] Failed to get string config value {}", paramName);
-            return std::string{};
-        }
-        auto paramStr = std::string{*paramPtr};
-        // strip leading and trailing quotes if any (god I hate toml)
-        if (paramStr.size() >= 2 && paramStr.front() == '"' && paramStr.back() == '"') {
-            paramStr = paramStr.substr(1, paramStr.size() - 2);
-        }
-        return paramStr;
-    }
-    else {
-        const auto* const paramPtr = (T* const*)HyprlandAPI::getConfigValue(PHANDLE, paramName)->getDataStaticPtr();
-        if (paramPtr == nullptr || *paramPtr == nullptr) {
-            Log::logger->log(Log::WARN, "[split-monitor-workspaces] Failed to get config value {}", paramName);
-            return T{0};
-        }
-        return **paramPtr;
-    }
-}
-
-static PHLMONITOR getPrimaryMonitor()
+PHLMONITOR getPrimaryMonitor()
 {
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Determining primary monitor");
     // The hyprland config can specify a default monitor to focus on startup, the plugin respects that setting
@@ -200,7 +182,7 @@ static PHLMONITOR getPrimaryMonitor()
     throw std::runtime_error("split-monitor-workspaces: No valid monitors found?");
 }
 
-static const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, const std::string& workspace)
+const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, const std::string& workspace)
 {
     // based on the string, we parse multiple formats:
     // #1 - "empty" -> get the first empty workspace on the monitor, or the last workspace if all have windows
@@ -269,7 +251,7 @@ static const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, con
         return curWorkspaces.front(); // stop at the first workspace
     }
 
-    if ((size_t)workspaceIndex >= curWorkspaces.size()) {
+    if (static_cast<size_t>(workspaceIndex) >= curWorkspaces.size()) {
         if (g_enableWrapping) {
             return curWorkspaces.front(); // wrap around to the first workspace
         }
@@ -279,7 +261,7 @@ static const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, con
     return curWorkspaces[workspaceIndex];
 }
 
-static PHLMONITOR getCurrentMonitor()
+PHLMONITOR getCurrentMonitor()
 {
     // get last focused monitor, because some people switch monitors with a keybind while the cursor is on a different monitor
     if (PHLMONITOR monitor = Desktop::focusState()->monitor()) {
@@ -290,7 +272,7 @@ static PHLMONITOR getCurrentMonitor()
     return g_pCompositor->getMonitorFromCursor();
 }
 
-static SDispatchResult splitWorkspace(const std::string& workspace)
+SDispatchResult splitWorkspace(const std::string& workspace)
 {
     if (!g_linkMonitors) {
         // not linked => just change workspace on current monitor
@@ -312,7 +294,7 @@ static SDispatchResult splitWorkspace(const std::string& workspace)
     return {.success = true, .error = ""};
 }
 
-static SDispatchResult cycleWorkspaces(const std::string& value, bool nowrap = false)
+SDispatchResult cycleWorkspaces(const std::string& value, bool nowrap = false)
 {
     int const delta = getDelta(value);
     if (delta == 0) {
@@ -361,19 +343,19 @@ static SDispatchResult cycleWorkspaces(const std::string& value, bool nowrap = f
     return {.success = true, .error = ""};
 }
 
-static SDispatchResult splitCycleWorkspaces(const std::string& value)
+SDispatchResult splitCycleWorkspaces(const std::string& value)
 {
     return cycleWorkspaces(value, !g_enableWrapping);
 }
 
-static SDispatchResult splitCycleWorkspacesNowrap(const std::string& value)
+SDispatchResult splitCycleWorkspacesNowrap(const std::string& value)
 {
     Log::logger->log(Log::WARN, "[split-monitor-workspaces] split-cycleworkspacesnowrap is deprecated. Set the `enable_wrapping` config value to false instead.");
     raiseNotification("[split-monitor-workspaces] split-cycleworkspacesnowrap is deprecated. Set the `enable_wrapping` config value to false instead.");
     return cycleWorkspaces(value, true);
 }
 
-static SDispatchResult splitMoveToWorkspace(const std::string& workspace)
+SDispatchResult splitMoveToWorkspace(const std::string& workspace)
 {
     if (!g_linkMonitors) {
         // not linked => just move to workspace on current monitor
@@ -386,13 +368,13 @@ static SDispatchResult splitMoveToWorkspace(const std::string& workspace)
     return {.success = result == "ok", .error = result};
 }
 
-static SDispatchResult splitMoveToWorkspaceSilent(const std::string& workspace)
+SDispatchResult splitMoveToWorkspaceSilent(const std::string& workspace)
 {
     auto const result = dispatchMoveToWorkspace(getWorkspaceFromMonitor(getCurrentMonitor(), workspace), true);
     return {.success = result == "ok", .error = result};
 }
 
-static SDispatchResult changeMonitor(bool quiet, const std::string& value)
+SDispatchResult changeMonitor(bool quiet, const std::string& value)
 {
     PHLMONITOR monitor = getCurrentMonitor();
 
@@ -436,17 +418,17 @@ static SDispatchResult changeMonitor(bool quiet, const std::string& value)
     return {.success = result == "ok", .error = result};
 }
 
-static SDispatchResult splitChangeMonitorSilent(const std::string& value)
+SDispatchResult splitChangeMonitorSilent(const std::string& value)
 {
     return changeMonitor(true, value);
 }
 
-static SDispatchResult splitChangeMonitor(const std::string& value)
+SDispatchResult splitChangeMonitor(const std::string& value)
 {
     return changeMonitor(false, value);
 }
 
-static SDispatchResult grabRogueWindows(const std::string& /*unused*/)
+SDispatchResult grabRogueWindows(const std::string& /*unused*/)
 {
     // implementation loosely based on shezdy's hyprsplit: https://github.com/shezdy/hyprsplit
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Grabbing rogue windows");
@@ -480,7 +462,7 @@ static SDispatchResult grabRogueWindows(const std::string& /*unused*/)
     return {.success = true, .error = ""};
 }
 
-static int64_t calcWorkspaceBaseIndex(const std::string& name)
+int64_t calcWorkspaceBaseIndex(const std::string& name)
 {
     int64_t currentPriority = g_vMonitorPriorities[name];
 
@@ -494,7 +476,7 @@ static int64_t calcWorkspaceBaseIndex(const std::string& name)
     return offset;
 }
 
-static void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-member-functions-to-static)
+void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-member-functions-to-static)
 {
     if (monitor->m_activeMonitorRule.m_disabled) {
         Log::logger->log(Log::INFO, "[split-monitor-workspaces] Skipping disabled monitor {}", monitor->m_name);
@@ -553,7 +535,7 @@ static void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-
     }
 }
 
-static void unmapMonitor(const PHLMONITOR& monitor)
+void unmapMonitor(const PHLMONITOR& monitor)
 {
     int64_t workspaceIndex = calcWorkspaceBaseIndex(monitor->m_name);
     int64_t maxWorkspaces = getMonitorMaxWorkspaces(monitor->m_name);
@@ -585,7 +567,7 @@ static void unmapMonitor(const PHLMONITOR& monitor)
     }
 }
 
-static void unmapAllMonitors()
+void unmapAllMonitors()
 {
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Unmapping all monitors");
     while (!g_vMonitorWorkspaceMap.empty()) {
@@ -602,7 +584,7 @@ static void unmapAllMonitors()
     g_vPersistentWorkspaces.clear();
 }
 
-static void remapAllMonitors()
+void remapAllMonitors()
 {
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Remapping all monitors");
     raiseNotification("[split-monitor-workspaces] Remapping workspaces...");
@@ -635,17 +617,22 @@ static void remapAllMonitors()
     }
 }
 
-static void loadConfigValues()
+void loadConfigValues()
 {
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Loading config values");
-    g_enableNotifications = getConfigValue<Hyprlang::INT>(k_enableNotifications) != 0;
-    g_enablePersistentWorkspaces = getConfigValue<Hyprlang::INT>(k_enablePersistentWorkspaces) != 0;
-    g_keepFocused = getConfigValue<Hyprlang::INT>(k_keepFocused) != 0;
-    g_workspaceCount = getConfigValue<Hyprlang::INT>(k_workspaceCount);
-    g_enableWrapping = getConfigValue<Hyprlang::INT>(k_enableWrapping) != 0;
-    g_defaultMonitor = getConfigValue<Hyprlang::STRING>(k_defaultMonitor);
-    g_linkMonitors = getConfigValue<Hyprlang::INT>(k_linkMonitors) != 0;
-    if (getConfigValue<Hyprlang::INT>(k_enableHy3) != 0) {
+    g_enableNotifications = g_config.enableNotifications->value() != 0;
+    g_enablePersistentWorkspaces = g_config.enablePersistentWorkspaces->value() != 0;
+    g_keepFocused = g_config.keepFocused->value() != 0;
+    g_workspaceCount = g_config.workspaceCount->value();
+    g_enableWrapping = g_config.enableWrapping->value() != 0;
+    // cursor:default_monitor is a Hyprland built-in config key, read it directly
+    auto defaultMonitorReply = Config::mgr()->getConfigValue(k_defaultMonitor);
+    if (defaultMonitorReply.dataptr != nullptr && defaultMonitorReply.type == &typeid(Config::STRING))
+        g_defaultMonitor = **reinterpret_cast<const Config::STRING* const*>(defaultMonitorReply.dataptr);
+    else
+        g_defaultMonitor = "";
+    g_linkMonitors = g_config.linkMonitors->value() != 0;
+    if (g_config.enableHy3->value() != 0) {
         g_hy3Status = Hy3Status::DETECTION_PENDING; // reset so it re-checks on next use
     }
     else {
@@ -657,7 +644,7 @@ static void loadConfigValues()
                      g_workspaceCount, g_keepFocused, g_enableNotifications, g_enablePersistentWorkspaces, g_enableWrapping, g_defaultMonitor.c_str(), g_linkMonitors);
 }
 
-static void reload()
+void reload()
 {
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Reloading plugin configuration");
     loadConfigValues();
@@ -665,7 +652,7 @@ static void reload()
     g_firstLoad = false;
 }
 
-static void monitorAddedCallback(const PHLMONITOR& monitor)
+void monitorAddedCallback(const PHLMONITOR& monitor)
 { // NOLINT(performance-unnecessary-value-param)
     if (monitor == nullptr) {
         Log::logger->log(Log::WARN, "[split-monitor-workspaces] Monitor added callback called with nullptr?");
@@ -674,7 +661,7 @@ static void monitorAddedCallback(const PHLMONITOR& monitor)
     mapMonitor(monitor);
 }
 
-static void monitorRemovedCallback(PHLMONITOR monitor) // NOLINT(performance-unnecessary-value-param)
+void monitorRemovedCallback(PHLMONITOR monitor) // NOLINT(performance-unnecessary-value-param)
 {
     if (monitor == nullptr) {
         Log::logger->log(Log::WARN, "[split-monitor-workspaces] Monitor removed callback called with nullptr?");
@@ -683,7 +670,7 @@ static void monitorRemovedCallback(PHLMONITOR monitor) // NOLINT(performance-unn
     unmapMonitor(monitor);
 }
 
-static void configReloadedCallback() // NOLINT(performance-unnecessary-value-param)
+void configReloadedCallback() // NOLINT(performance-unnecessary-value-param)
 {
     // !!! anything you call in this function should not reload the config, as it will cause an infinite loop !!!
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Config reloaded");
@@ -691,7 +678,7 @@ static void configReloadedCallback() // NOLINT(performance-unnecessary-value-par
     reload();
 }
 
-static void preConfigReloadCallback() // NOLINT(performance-unnecessary-value-param)
+void preConfigReloadCallback() // NOLINT(performance-unnecessary-value-param)
 {
     // clear monitor-specific config values. This is needed if the user
     // removes monitor_priority or monitor_max_workspaces entries from
@@ -700,7 +687,7 @@ static void preConfigReloadCallback() // NOLINT(performance-unnecessary-value-pa
     g_vMonitorMaxWorkspaces.clear();
 }
 
-static Hyprlang::CParseResult monitorPriorityConfigHandler(const char* command, const char* args)
+Hyprlang::CParseResult monitorPriorityConfigHandler(const char* command, const char* args)
 {
     const auto ARGS = Hyprutils::String::CVarList2(args);
 
@@ -715,7 +702,7 @@ static Hyprlang::CParseResult monitorPriorityConfigHandler(const char* command, 
     return result;
 }
 
-static Hyprlang::CParseResult monitorMaxWorkspacesConfigHandler(const char* command, const char* args)
+Hyprlang::CParseResult monitorMaxWorkspacesConfigHandler(const char* command, const char* args)
 {
     const auto ARGS = Hyprutils::String::CVarList2(args);
 
@@ -748,6 +735,57 @@ static Hyprlang::CParseResult monitorMaxWorkspacesConfigHandler(const char* comm
     return result;
 }
 
+int monitorPriorityLuaHandler(lua_State* L)
+{
+    if (!lua_istable(L, 1))
+        return Config::Lua::Bindings::Internal::configError(L, "monitor_priority: expected a table of monitor name strings");
+
+    int64_t priorityCounter = 0;
+    int n = lua_rawlen(L, 1);
+    for (int i = 1; i <= n; i++) {
+        lua_rawgeti(L, 1, i);
+        if (lua_isstring(L, -1) == 0) {
+            lua_pop(L, 1);
+            return Config::Lua::Bindings::Internal::configError(L, "monitor_priority: all elements must be strings");
+        }
+        std::string monitorName = lua_tostring(L, -1);
+        lua_pop(L, 1);
+        Log::logger->log(Log::INFO, "[split-monitor-workspaces] Setting monitor priority: {} -> {}", monitorName, priorityCounter);
+        g_vMonitorPriorities[monitorName] = {.value = priorityCounter, .wasSetFromConfig = true};
+        priorityCounter++;
+    }
+    return 0;
+}
+
+int monitorMaxWorkspacesLuaHandler(lua_State* L)
+{
+    if (!lua_istable(L, 1))
+        return Config::Lua::Bindings::Internal::configError(L, "max_workspaces: expected a table { monitor, max }");
+
+    std::string monitorName;
+    int64_t maxWorkspaces = 0;
+
+    {
+        Hyprutils::Utils::CScopeGuard x([L] { lua_pop(L, 1); });
+        lua_getfield(L, 1, "monitor");
+        if (lua_isstring(L, -1) == 0)
+            return Config::Lua::Bindings::Internal::configError(L, "max_workspaces: monitor must be a string");
+        monitorName = lua_tostring(L, -1);
+    }
+
+    {
+        Hyprutils::Utils::CScopeGuard x([L] { lua_pop(L, 1); });
+        lua_getfield(L, 1, "max");
+        if (lua_isinteger(L, -1) == 0)
+            return Config::Lua::Bindings::Internal::configError(L, "max_workspaces: max must be an integer");
+        maxWorkspaces = lua_tointeger(L, -1);
+    }
+
+    Log::logger->log(Log::INFO, "[split-monitor-workspaces] Setting monitor max workspaces: {} -> {}", monitorName, maxWorkspaces);
+    g_vMonitorMaxWorkspaces[monitorName] = {.value = maxWorkspaces, .wasSetFromConfig = true};
+    return 0;
+}
+} // namespace
 // Do NOT change this function.
 APICALL EXPORT std::string PLUGIN_API_VERSION()
 {
@@ -758,16 +796,36 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
 {
     PHANDLE = handle;
 
-    HyprlandAPI::addConfigValue(PHANDLE, k_workspaceCount, Hyprlang::INT{10});
-    HyprlandAPI::addConfigValue(PHANDLE, k_keepFocused, Hyprlang::INT{0});
-    HyprlandAPI::addConfigValue(PHANDLE, k_enableNotifications, Hyprlang::INT{0});
-    HyprlandAPI::addConfigValue(PHANDLE, k_enablePersistentWorkspaces, Hyprlang::INT{1});
-    HyprlandAPI::addConfigValue(PHANDLE, k_enableWrapping, Hyprlang::INT{1});
-    HyprlandAPI::addConfigValue(PHANDLE, k_defaultMonitor, Hyprlang::STRING{""});
-    HyprlandAPI::addConfigKeyword(PHANDLE, k_monitorPriority, monitorPriorityConfigHandler, (Hyprlang::SHandlerOptions){.allowFlags = false});
-    HyprlandAPI::addConfigKeyword(PHANDLE, k_monitorMaxWorkspaces, monitorMaxWorkspacesConfigHandler, (Hyprlang::SHandlerOptions){.allowFlags = false});
-    HyprlandAPI::addConfigValue(PHANDLE, k_linkMonitors, Hyprlang::INT{0});
-    HyprlandAPI::addConfigValue(PHANDLE, k_enableHy3, Hyprlang::INT{1});
+    g_config.workspaceCount = makeShared<Config::Values::CIntValue>(k_workspaceCount, "", 10LL);
+    g_config.keepFocused = makeShared<Config::Values::CIntValue>(k_keepFocused, "", 0LL);
+    g_config.enableNotifications = makeShared<Config::Values::CIntValue>(k_enableNotifications, "", 0LL);
+    g_config.enablePersistentWorkspaces = makeShared<Config::Values::CIntValue>(k_enablePersistentWorkspaces, "", 1LL);
+    g_config.enableWrapping = makeShared<Config::Values::CIntValue>(k_enableWrapping, "", 1LL);
+    if (Config::mgr()->type() == Config::CONFIG_LEGACY) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        HyprlandAPI::addConfigKeyword(PHANDLE, k_monitorPriority, monitorPriorityConfigHandler, (Hyprlang::SHandlerOptions){.allowFlags = false});
+        HyprlandAPI::addConfigKeyword(PHANDLE, k_monitorMaxWorkspaces, monitorMaxWorkspacesConfigHandler, (Hyprlang::SHandlerOptions){.allowFlags = false});
+#pragma GCC diagnostic pop
+    }
+    else if (Config::mgr()->type() == Config::CONFIG_LUA) {
+        HyprlandAPI::addLuaFunction(PHANDLE, "split_monitor_workspaces", "monitor_priority", monitorPriorityLuaHandler);
+        HyprlandAPI::addLuaFunction(PHANDLE, "split_monitor_workspaces", "max_workspaces", monitorMaxWorkspacesLuaHandler);
+    }
+    else {
+        HyprlandAPI::addNotification(PHANDLE, "[split-monitor-workspaces] Failure in initialization: Failed to get a valid config manager", CHyprColor{1.0, 0.2, 0.2, 1.0}, 5000);
+        throw std::runtime_error("[split-monitor-workspaces] Config manager bad");
+    }
+    g_config.linkMonitors = makeShared<Config::Values::CIntValue>(k_linkMonitors, "", 0LL);
+    g_config.enableHy3 = makeShared<Config::Values::CIntValue>(k_enableHy3, "", 1LL);
+
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_config.workspaceCount);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_config.keepFocused);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_config.enableNotifications);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_config.enablePersistentWorkspaces);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_config.enableWrapping);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_config.linkMonitors);
+    HyprlandAPI::addConfigValueV2(PHANDLE, g_config.enableHy3);
 
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-workspace", splitWorkspace);
     HyprlandAPI::addDispatcherV2(PHANDLE, "split-cycleworkspaces", splitCycleWorkspaces);
@@ -787,7 +845,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     // this is because Hyprland will automatically force a config reload after the plugin is loaded
 
     raiseNotification("[split-monitor-workspaces] Initialized successfully!");
-    return {"split-monitor-workspaces", "Split monitor workspace namespaces", "zjeffer", "1.2.0"};
+    return {.name = "split-monitor-workspaces", .description = "Split monitor workspace namespaces", .author = "zjeffer", .version = "1.2.0"};
 }
 
 APICALL EXPORT void PLUGIN_EXIT()

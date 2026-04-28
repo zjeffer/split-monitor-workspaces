@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       # image built from the Dockerfile in the .github/ folder
-      image: duckonaut/hyprland-arch:latest
+      image: zjeffer/hyprland-arch:latest
     steps:
     - name: Install dependencies
       run: |

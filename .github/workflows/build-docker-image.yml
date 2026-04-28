@@ -25,4 +25,4 @@ jobs:
           context: .
           file: .github/Dockerfile
           push: true
-          tags: duckonaut/hyprland-arch:latest
+          tags: zjeffer/hyprland-arch:latest

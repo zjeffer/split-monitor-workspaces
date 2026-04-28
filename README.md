@@ -136,6 +136,7 @@ It also provides the following config values
 | `plugin:split-monitor-workspaces:monitor_priority`              | keyword   | -         | Set per monitor priorities. The first monitor in the list will have the highest priority, the second monitor one lower and so on. |
 | `plugin:split-monitor-workspaces:max_workspaces`                | keyword   | -         | Set per monitor maximum number of workspaces that should be created. |
 | `plugin:split-monitor-workspaces:link_monitors`                 | boolean   | 0         | Enable gnome-like workspace switching. When enabled, switching workspaces on one monitor will switch all monitors to the corresponding workspace. |
+| `plugin:split-monitor-workspaces:enable_hy3`                    | boolean   | 1         | Enable hy3 support. When enabled and the [hy3](https://github.com/outfoxxed/hy3) plugin is loaded, move operations will use hy3 dispatchers to move entire node groups (multiple windows) across workspaces. |
 
 This plugin supports [waybar's](https://github.com/Alexays/Waybar) `hyprland/workspaces` module. You can configure it like this:
 
@@ -171,6 +172,9 @@ plugin {
 
         # set this to 1 for gnome-like workspace switching
         link_monitors = 0
+
+        # set this to 0 to disable hy3 support
+        # enable_hy3 = 1
 
         # if you want a different monitor order
         monitor_priority = DP-1, DVI-D-1

@@ -9,6 +9,7 @@
 #include <hyprland/src/event/EventBus.hpp>
 #include <hyprland/src/helpers/Color.hpp>
 #include <hyprland/src/helpers/Monitor.hpp>
+#include <hyprland/src/managers/input/InputManager.hpp>
 #include <hyprutils/memory/SharedPtr.hpp>
 #include <hyprutils/string/VarList2.hpp>
 
@@ -344,7 +345,21 @@ static SDispatchResult splitMoveToWorkspace(const std::string& workspace)
 
 static SDispatchResult splitMoveToWorkspaceSilent(const std::string& workspace)
 {
+    // Save special workspace info before the move, because moving a window
+    // from a special workspace via hyprctl dispatch loses focus on it
+    PHLWINDOW const activeWindow = Desktop::focusState()->window();
+    PHLWORKSPACE specialWs = nullptr;
+    if (activeWindow && activeWindow->onSpecialWorkspace()) {
+        specialWs = activeWindow->m_workspace;
+    }
+
     auto const result = HyprlandAPI::invokeHyprctlCommand("dispatch", "movetoworkspacesilent " + getWorkspaceFromMonitor(getCurrentMonitor(), workspace));
+
+    // Refocus a remaining window in the special workspace if we moved from one
+    if (specialWs && specialWs->getWindows() > 0) {
+        g_pInputManager->refocus();
+    }
+
     return {.success = result == "ok", .error = result};
 }
 

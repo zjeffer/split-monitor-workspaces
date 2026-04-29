@@ -197,7 +197,7 @@ static PHLMONITOR getPrimaryMonitor()
         return *primaryMonitorIt;
     }
     Log::logger->log(Log::ERR, "[split-monitor-workspaces] No valid monitors found?");
-    throw std::runtime_error("split-monitor-workspaces: No valid monitors found?");
+    return nullptr;
 }
 
 static const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, const std::string& workspace)
@@ -686,9 +686,19 @@ static void monitorRemovedCallback(PHLMONITOR monitor) // NOLINT(performance-unn
 static void configReloadedCallback() // NOLINT(performance-unnecessary-value-param)
 {
     // !!! anything you call in this function should not reload the config, as it will cause an infinite loop !!!
-    Log::logger->log(Log::INFO, "[split-monitor-workspaces] Config reloaded");
-    raiseNotification("[split-monitor-workspaces] Config reloaded");
-    reload();
+    try {
+        Log::logger->log(Log::INFO, "[split-monitor-workspaces] Config reloaded");
+        raiseNotification("[split-monitor-workspaces] Config reloaded");
+        reload();
+    }
+    catch (const std::exception& e) {
+        Log::logger->log(Log::ERR, "[split-monitor-workspaces] Exception during config reload: {}", e.what());
+        try { unmapAllMonitors(); } catch (...) {}
+    }
+    catch (...) {
+        Log::logger->log(Log::ERR, "[split-monitor-workspaces] Unknown exception during config reload");
+        try { unmapAllMonitors(); } catch (...) {}
+    }
 }
 
 static void preConfigReloadCallback() // NOLINT(performance-unnecessary-value-param)

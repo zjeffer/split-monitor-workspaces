@@ -1,7 +1,5 @@
 #pragma once
 
-#include "globals.hpp"
-
 #include <hyprland/src/config/ConfigManager.hpp>
 #include <hyprland/src/managers/KeybindManager.hpp>
 
@@ -25,13 +23,13 @@ bool isHy3Available();
 std::string runDispatcher(const std::string& dispatcher, const std::string& args);
 std::string dispatchMoveToWorkspace(const std::string& workspaceName, bool silent);
 
-int          getDelta(const std::string& direction);
-int64_t      getMonitorMaxWorkspaces(const std::string& name);
-PHLMONITOR   getPrimaryMonitor();
+int getDelta(const std::string& direction);
+int64_t getMonitorMaxWorkspaces(const std::string& name);
+PHLMONITOR getPrimaryMonitor();
 const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, const std::string& workspace);
-PHLMONITOR   getCurrentMonitor();
-int64_t      calcWorkspaceBaseIndex(const std::string& name);
-std::string  configTypeToString(Config::eConfigManagerType type);
+PHLMONITOR getCurrentMonitor();
+int64_t calcWorkspaceBaseIndex(const std::string& name);
+std::string configTypeToString(Config::eConfigManagerType type);
 
 std::optional<std::string> luaArgToString(lua_State* L, int idx);
 int pushLuaDispatchResult(lua_State* L, const SDispatchResult& result);

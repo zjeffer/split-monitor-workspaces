@@ -1,4 +1,5 @@
 #include "helpers.hpp"
+#include "globals.hpp"
 
 #include <hyprland/src/Compositor.hpp>
 #include <hyprland/src/config/lua/bindings/LuaBindingsInternal.hpp>

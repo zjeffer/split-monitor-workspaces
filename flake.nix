@@ -21,7 +21,6 @@
           root = ./.;
           include = [
             "src"
-            "include"
             ./Makefile
             ./meson.build
           ];

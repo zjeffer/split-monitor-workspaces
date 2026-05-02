@@ -12,7 +12,7 @@
 #include <stdexcept>
 #include <string_view>
 
-const char* adaptConfigKey(const char* rawKey, Config::eConfigManagerType type)
+const char* translateConfigKey(const char* rawKey, Config::eConfigManagerType type)
 {
     if (type != Config::CONFIG_LUA || !std::string_view{rawKey}.starts_with("plugin:"))
         return rawKey;
@@ -81,7 +81,7 @@ std::string dispatchMoveToWorkspace(const std::string& workspaceName, bool silen
     return runDispatcher("movetoworkspace", workspaceName);
 }
 
-int getDelta(const std::string& direction)
+int directionToDelta(const std::string& direction)
 {
     if (direction == "next")
         return 1;
@@ -98,9 +98,9 @@ int getDelta(const std::string& direction)
     return 0;
 }
 
-// avoid default initialization with []
 int64_t getMonitorMaxWorkspaces(const std::string& name)
 {
+    // avoid default initialization with []
     return g_vMonitorMaxWorkspaces.contains(name) ? g_vMonitorMaxWorkspaces[name] : g_workspaceCount;
 }
 
@@ -115,7 +115,7 @@ PHLMONITOR getPrimaryMonitor()
                 return monitor;
             }
         }
-        Log::logger->log(Log::WARN, "[split-monitor-workspaces] Default monitor '{}' not found, will use monitor with lowest ID as ", g_defaultMonitor.c_str());
+        Log::logger->log(Log::WARN, "[split-monitor-workspaces] Default monitor '{}' not found, will use monitor with lowest ID as primary monitor", g_defaultMonitor.c_str());
     }
     // default monitor not set, let's use the monitor with the lowest ID
     // but let's first filter out invalid monitors (likely will never happen I assume, but just in case)
@@ -126,7 +126,7 @@ PHLMONITOR getPrimaryMonitor()
         return *primaryMonitorIt;
     }
     Log::logger->log(Log::ERR, "[split-monitor-workspaces] No valid monitors found?");
-    throw std::runtime_error("split-monitor-workspaces: No valid monitors found?");
+    return nullptr; // we don't throw here because this can sometimes happen when waking from suspend
 }
 
 const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, const std::string& workspace)
@@ -165,7 +165,7 @@ const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, const std:
     int workspaceIndex = 0;
     if (workspace.starts_with("+") || workspace.starts_with("-")) {
         // #2 relative IDS, e.g. +1, -2
-        auto delta = getDelta(workspace);
+        auto delta = directionToDelta(workspace);
         if (delta == 0) {
             Log::logger->log(Log::ERR, "[split-monitor-workspaces] Invalid workspace delta: {}", workspace.c_str());
             return workspace;

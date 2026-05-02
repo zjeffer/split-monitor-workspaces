@@ -35,7 +35,7 @@ SDispatchResult splitWorkspace(const std::string& workspace)
 
 SDispatchResult cycleWorkspaces(const std::string& value, bool nowrap = false)
 {
-    int const delta = getDelta(value);
+    int const delta = directionToDelta(value);
     if (delta == 0) {
         Log::logger->log(Log::WARN, "[split-monitor-workspaces] Invalid cycle value: {}", value.c_str());
         return {.success = false, .error = "Invalid cycle value: " + value};
@@ -114,7 +114,7 @@ SDispatchResult changeMonitor(bool quiet, const std::string& value)
 
     uint64_t monitorCount = g_pCompositor->m_monitors.size();
 
-    int const delta = getDelta(value);
+    int const delta = directionToDelta(value);
     if (delta == 0) {
         Log::logger->log(Log::WARN, "[split-monitor-workspaces] Invalid monitor value: {}", value.c_str());
         return {.success = false, .error = "Invalid monitor value: " + value};
@@ -391,9 +391,19 @@ void monitorRemovedCallback(PHLMONITOR monitor) // NOLINT(performance-unnecessar
 void configReloadedCallback() // NOLINT(performance-unnecessary-value-param)
 {
     // !!! anything you call in this function should not reload the config, as it will cause an infinite loop !!!
-    Log::logger->log(Log::INFO, "[split-monitor-workspaces] Config reloaded");
-    raiseNotification("[split-monitor-workspaces] Config reloaded");
-    reload();
+    try {
+        Log::logger->log(Log::INFO, "[split-monitor-workspaces] Config reloaded");
+        raiseNotification("[split-monitor-workspaces] Config reloaded");
+        reload();
+    }
+    catch (const std::exception& e) {
+        Log::logger->log(Log::ERR, "[split-monitor-workspaces] Exception during config reload: {}", e.what());
+        try {
+            unmapAllMonitors();
+        }
+        catch (...) {
+        }
+    }
 }
 
 void preConfigReloadCallback() // NOLINT(performance-unnecessary-value-param)
@@ -562,13 +572,13 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Detected config type: {}", configTypeToString(configType));
 
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Registering config values");
-    g_config.workspaceCount = makeShared<Config::Values::CIntValue>(adaptConfigKey(k_workspaceCount, configType), "", 10LL);
-    g_config.keepFocused = makeShared<Config::Values::CIntValue>(adaptConfigKey(k_keepFocused, configType), "", 0LL);
-    g_config.enableNotifications = makeShared<Config::Values::CIntValue>(adaptConfigKey(k_enableNotifications, configType), "", 0LL);
-    g_config.enablePersistentWorkspaces = makeShared<Config::Values::CIntValue>(adaptConfigKey(k_enablePersistentWorkspaces, configType), "", 1LL);
-    g_config.enableWrapping = makeShared<Config::Values::CIntValue>(adaptConfigKey(k_enableWrapping, configType), "", 1LL);
-    g_config.linkMonitors = makeShared<Config::Values::CIntValue>(adaptConfigKey(k_linkMonitors, configType), "", 0LL);
-    g_config.enableHy3 = makeShared<Config::Values::CIntValue>(adaptConfigKey(k_enableHy3, configType), "", 1LL);
+    g_config.workspaceCount = makeShared<Config::Values::CIntValue>(translateConfigKey(k_workspaceCount, configType), "", 10LL);
+    g_config.keepFocused = makeShared<Config::Values::CIntValue>(translateConfigKey(k_keepFocused, configType), "", 0LL);
+    g_config.enableNotifications = makeShared<Config::Values::CIntValue>(translateConfigKey(k_enableNotifications, configType), "", 0LL);
+    g_config.enablePersistentWorkspaces = makeShared<Config::Values::CIntValue>(translateConfigKey(k_enablePersistentWorkspaces, configType), "", 1LL);
+    g_config.enableWrapping = makeShared<Config::Values::CIntValue>(translateConfigKey(k_enableWrapping, configType), "", 1LL);
+    g_config.linkMonitors = makeShared<Config::Values::CIntValue>(translateConfigKey(k_linkMonitors, configType), "", 0LL);
+    g_config.enableHy3 = makeShared<Config::Values::CIntValue>(translateConfigKey(k_enableHy3, configType), "", 1LL);
 
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Adding config values to Hyprland");
     HyprlandAPI::addConfigValueV2(PHANDLE, g_config.workspaceCount);

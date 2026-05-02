@@ -12,9 +12,9 @@
 #include <stdexcept>
 #include <string_view>
 
-const char* translateConfigKey(const char* rawKey, Config::eConfigManagerType type)
+const char* translateConfigKey(const char* rawKey)
 {
-    if (type != Config::CONFIG_LUA || !std::string_view{rawKey}.starts_with("plugin:"))
+    if (Config::mgr()->type() != Config::CONFIG_LUA || !std::string_view{rawKey}.starts_with("plugin:"))
         return rawKey;
 
     static std::map<std::string, std::string> luaNames;
@@ -245,7 +245,6 @@ std::string configTypeToString(Config::eConfigManagerType type)
     }
 }
 
-// Helper: coerce the top Lua argument to a string (integer args are converted).
 std::optional<std::string> luaArgToString(lua_State* L, int idx)
 {
     if (lua_isinteger(L, idx) != 0)

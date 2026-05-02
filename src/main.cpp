@@ -335,31 +335,84 @@ void remapAllMonitors()
     }
 }
 
+void loadMonitorPriority(const std::string& raw)
+{
+    if (raw.empty())
+        return;
+
+    const auto args = Hyprutils::String::CVarList2(raw.c_str());
+
+    int64_t priorityCounter = 0;
+    for (const auto& arg : args) {
+        Log::logger->log(Log::INFO, "[split-monitor-workspaces] Setting monitor priority: {} -> {}", arg, priorityCounter);
+        g_vMonitorPriorities[std::string(arg)] = {.value = priorityCounter, .wasSetFromConfig = true};
+        priorityCounter++;
+    }
+}
+
+void loadMonitorMaxWorkspaces(const std::string& raw)
+{
+    if (raw.empty())
+        return;
+
+    size_t start = 0;
+    while (start <= raw.size()) {
+        const auto end = raw.find(';', start);
+        const auto entry = raw.substr(start, end == std::string::npos ? std::string::npos : end - start);
+
+        if (!entry.empty()) {
+            const auto args = Hyprutils::String::CVarList2(entry.c_str());
+            if (args.size() != 2) {
+                Log::logger->log(Log::ERR, "[split-monitor-workspaces] Invalid max_workspaces entry '{}', expected 'MONITOR, COUNT' entries separated by ';'", entry.c_str());
+            }
+            else {
+                try {
+                    auto monitorName = std::string(args[0]);
+                    const auto maxWorkspaces = std::stoi(std::string(args[1]));
+
+                    Log::logger->log(Log::INFO, "[split-monitor-workspaces] Setting monitor max workspaces from Lua config: {} -> {}", monitorName.c_str(), maxWorkspaces);
+                    g_vMonitorMaxWorkspaces[monitorName] = {.value = maxWorkspaces, .wasSetFromConfig = true};
+                }
+                catch (const std::exception& e) {
+                    Log::logger->log(Log::ERR, "[split-monitor-workspaces] Failed to parse max_workspaces entry '{}': {}", entry.c_str(), e.what());
+                }
+            }
+        }
+
+        if (end == std::string::npos)
+            break;
+
+        start = end + 1;
+    }
+}
+
 void loadConfigValues()
 {
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Loading config values");
-    g_enableNotifications = g_config.enableNotifications->value() != 0;
-    g_enablePersistentWorkspaces = g_config.enablePersistentWorkspaces->value() != 0;
-    g_keepFocused = g_config.keepFocused->value() != 0;
-    g_workspaceCount = g_config.workspaceCount->value();
-    g_enableWrapping = g_config.enableWrapping->value() != 0;
-    // cursor:default_monitor is a Hyprland built-in config key, read it directly
-    auto defaultMonitorReply = Config::mgr()->getConfigValue(k_defaultMonitor);
-    if (defaultMonitorReply.dataptr != nullptr && defaultMonitorReply.type == &typeid(Config::STRING))
-        g_defaultMonitor = **reinterpret_cast<const Config::STRING* const*>(defaultMonitorReply.dataptr);
-    else
-        g_defaultMonitor = "";
-    g_linkMonitors = g_config.linkMonitors->value() != 0;
-    if (g_config.enableHy3->value() != 0) {
+    g_enableNotifications = getConfigValue<Hyprlang::INT>(translateConfigKey(k_enableNotifications)) != 0;
+    g_enablePersistentWorkspaces = getConfigValue<Hyprlang::INT>(translateConfigKey(k_enablePersistentWorkspaces)) != 0;
+    g_keepFocused = getConfigValue<Hyprlang::INT>(translateConfigKey(k_keepFocused)) != 0;
+    g_workspaceCount = getConfigValue<Hyprlang::INT>(translateConfigKey(k_workspaceCount));
+    g_enableWrapping = getConfigValue<Hyprlang::INT>(translateConfigKey(k_enableWrapping)) != 0;
+    g_defaultMonitor = getConfigValue<Hyprlang::STRING>(translateConfigKey(k_defaultMonitor));
+    g_linkMonitors = getConfigValue<Hyprlang::INT>(translateConfigKey(k_linkMonitors)) != 0;
+    if (getConfigValue<Hyprlang::INT>(translateConfigKey(k_enableHy3)) != 0) {
         g_hy3Status = Hy3Status::DETECTION_PENDING; // reset so it re-checks on next use
     }
     else {
         g_hy3Status = Hy3Status::DISABLED;
     }
+
+    if (Config::mgr()->type() == Config::CONFIG_LUA) {
+        loadMonitorPriority(getConfigValue<Config::STRING>(translateConfigKey(k_monitorPriority)));
+        loadMonitorMaxWorkspaces(getConfigValue<Config::STRING>(translateConfigKey(k_monitorMaxWorkspaces)));
+    }
+
     Log::logger->log(Log::INFO,
                      "[split-monitor-workspaces] Config values loaded: workspaceCount={}, keepFocused={}, enableNotifications={}, enablePersistentWorkspaces={}, enableWrapping={}, "
-                     "defaultMonitor='{}', linkMonitors={}",
-                     g_workspaceCount, g_keepFocused, g_enableNotifications, g_enablePersistentWorkspaces, g_enableWrapping, g_defaultMonitor.c_str(), g_linkMonitors);
+                     "defaultMonitor='{}', linkMonitors={}, enableHy3={}",
+                     g_workspaceCount, g_keepFocused, g_enableNotifications, g_enablePersistentWorkspaces, g_enableWrapping, g_defaultMonitor.c_str(), g_linkMonitors,
+                     g_hy3Status == Hy3Status::DISABLED ? "false" : "true");
 }
 
 void reload()
@@ -572,13 +625,13 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Detected config type: {}", configTypeToString(configType));
 
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Registering config values");
-    g_config.workspaceCount = makeShared<Config::Values::CIntValue>(translateConfigKey(k_workspaceCount, configType), "", 10LL);
-    g_config.keepFocused = makeShared<Config::Values::CIntValue>(translateConfigKey(k_keepFocused, configType), "", 0LL);
-    g_config.enableNotifications = makeShared<Config::Values::CIntValue>(translateConfigKey(k_enableNotifications, configType), "", 0LL);
-    g_config.enablePersistentWorkspaces = makeShared<Config::Values::CIntValue>(translateConfigKey(k_enablePersistentWorkspaces, configType), "", 1LL);
-    g_config.enableWrapping = makeShared<Config::Values::CIntValue>(translateConfigKey(k_enableWrapping, configType), "", 1LL);
-    g_config.linkMonitors = makeShared<Config::Values::CIntValue>(translateConfigKey(k_linkMonitors, configType), "", 0LL);
-    g_config.enableHy3 = makeShared<Config::Values::CIntValue>(translateConfigKey(k_enableHy3, configType), "", 1LL);
+    g_config.workspaceCount = makeShared<Config::Values::CIntValue>(translateConfigKey(k_workspaceCount), "", 10);
+    g_config.keepFocused = makeShared<Config::Values::CIntValue>(translateConfigKey(k_keepFocused), "", 0);
+    g_config.enableNotifications = makeShared<Config::Values::CIntValue>(translateConfigKey(k_enableNotifications), "", 0);
+    g_config.enablePersistentWorkspaces = makeShared<Config::Values::CIntValue>(translateConfigKey(k_enablePersistentWorkspaces), "", 1);
+    g_config.enableWrapping = makeShared<Config::Values::CIntValue>(translateConfigKey(k_enableWrapping), "", 1);
+    g_config.linkMonitors = makeShared<Config::Values::CIntValue>(translateConfigKey(k_linkMonitors), "", 0);
+    g_config.enableHy3 = makeShared<Config::Values::CIntValue>(translateConfigKey(k_enableHy3), "", 1);
 
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Adding config values to Hyprland");
     HyprlandAPI::addConfigValueV2(PHANDLE, g_config.workspaceCount);
@@ -609,6 +662,22 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
             break;
         }
         case Config::CONFIG_LUA: {
+            Log::logger->log(Log::INFO, "[split-monitor-workspaces] Registering config values (lua)");
+            g_config.workspaceCount = Config::Values::makeConfigValue<Config::Values::Int>(translateConfigKey(k_workspaceCount), "How many workspaces to bind to the monitor", 10);
+            g_config.keepFocused = Config::Values::makeConfigValue<Config::Values::Int>(translateConfigKey(k_keepFocused), "Keep current workspaces focused on plugin init/reload", 0);
+            g_config.enableNotifications = Config::Values::makeConfigValue<Config::Values::Int>(translateConfigKey(k_enableNotifications), "Enable plugin notifications", 0);
+            g_config.enablePersistentWorkspaces = Config::Values::makeConfigValue<Config::Values::Int>(translateConfigKey(k_enablePersistentWorkspaces), "Enable persistent workspaces", 1);
+            g_config.enableWrapping = Config::Values::makeConfigValue<Config::Values::Int>(translateConfigKey(k_enableWrapping), "Enable workspace wrapping", 1);
+            g_config.linkMonitors = Config::Values::makeConfigValue<Config::Values::Int>(translateConfigKey(k_linkMonitors), "Enable gnome-like workspace switching", 0);
+            g_config.enableHy3 = Config::Values::makeConfigValue<Config::Values::Int>(translateConfigKey(k_enableHy3), "Enable Hy3 support", 1);
+            HyprlandAPI::addConfigValueV2(PHANDLE, g_config.workspaceCount);
+            HyprlandAPI::addConfigValueV2(PHANDLE, g_config.keepFocused);
+            HyprlandAPI::addConfigValueV2(PHANDLE, g_config.enableNotifications);
+            HyprlandAPI::addConfigValueV2(PHANDLE, g_config.enablePersistentWorkspaces);
+            HyprlandAPI::addConfigValueV2(PHANDLE, g_config.enableWrapping);
+            HyprlandAPI::addConfigValueV2(PHANDLE, g_config.linkMonitors);
+            HyprlandAPI::addConfigValueV2(PHANDLE, g_config.enableHy3);
+
             HyprlandAPI::addLuaFunction(PHANDLE, "split_monitor_workspaces", "monitor_priority", monitorPriorityLuaHandler);
             HyprlandAPI::addLuaFunction(PHANDLE, "split_monitor_workspaces", "max_workspaces", monitorMaxWorkspacesLuaHandler);
 

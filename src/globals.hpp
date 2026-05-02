@@ -55,13 +55,13 @@ struct MonitorConfigValue {
 };
 
 struct SPluginConfig {
-    SP<Config::Values::CIntValue> workspaceCount;
-    SP<Config::Values::CIntValue> keepFocused;
-    SP<Config::Values::CIntValue> enableNotifications;
-    SP<Config::Values::CIntValue> enablePersistentWorkspaces;
-    SP<Config::Values::CIntValue> enableWrapping;
-    SP<Config::Values::CIntValue> linkMonitors;
-    SP<Config::Values::CIntValue> enableHy3;
+    SP<Config::Values::IValue> workspaceCount;
+    SP<Config::Values::IValue> keepFocused;
+    SP<Config::Values::IValue> enableNotifications;
+    SP<Config::Values::IValue> enablePersistentWorkspaces;
+    SP<Config::Values::IValue> enableWrapping;
+    SP<Config::Values::IValue> linkMonitors;
+    SP<Config::Values::IValue> enableHy3;
 };
 
 ///////////////  Global state ///////////////
@@ -88,7 +88,9 @@ inline std::vector<PHLWORKSPACE> g_vPersistentWorkspaces; // to keep ownership o
 inline std::map<std::string, MonitorConfigValue> g_vMonitorPriorities;
 inline std::map<std::string, MonitorConfigValue> g_vMonitorMaxWorkspaces;
 
+/////////////// Event handlers ///////////////
+
 inline CHyprSignalListener e_monitorAddedHandle = nullptr;
 inline CHyprSignalListener e_monitorRemovedHandle = nullptr;
 inline CHyprSignalListener e_configReloadedHandle = nullptr;
-inline CHyprSignalListener e_preConfigReloadHandle = nullptr;
+inline CHyprSignalListener e_preConfigReloadHandle = nullptr; // triggered right before the config is reloaded

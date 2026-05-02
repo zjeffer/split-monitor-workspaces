@@ -9,10 +9,11 @@
 
 struct lua_State;
 
-// Translate a raw plugin config key for the Lua config manager.
-// The Lua manager stores keys with hyphens replaced by underscores; only '-'→'_'
-// is applied here. The colon→dot translation is handled by the Lua manager itself.
-const char* translateConfigKey(const char* rawKey, Config::eConfigManagerType type);
+// Translate a raw plugin config key for the Lua config manager. For Lua, we need to replace dashes with underscores.
+const char* translateConfigKey(const char* rawKey);
+
+// Get a config value of the specified type.
+template <typename T> auto getConfigValue(const char* paramName);
 
 // Raise a Hyprland notification. Nullop if notifications are disabled in the plugin config.
 void raiseNotification(const std::string& message, float timeout = 5000.0F);
@@ -57,3 +58,6 @@ int pushLuaDispatchResult(lua_State* L, const SDispatchResult& result);
 
 // Push a Lua error result for invalid arguments.
 int pushLuaArgError(lua_State* L, const std::string& fn);
+
+/////// Template implementations
+#include "helpers.txx"

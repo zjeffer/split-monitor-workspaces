@@ -611,19 +611,16 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Initializing plugin");
     PHANDLE = handle;
 
-    auto const configType = Config::mgr()->type();
-    Log::logger->log(Log::INFO, "[split-monitor-workspaces] Detected config type: {}", configTypeToString(configType));
+    Log::logger->log(Log::INFO, "[split-monitor-workspaces] Creating config values");
+    g_config.workspaceCount = Config::Values::makeConfigValue<Config::Values::Int>(k_workspaceCount, "How many workspaces to bind to the monitor", 10);
+    g_config.keepFocused = Config::Values::makeConfigValue<Config::Values::Bool>(k_keepFocused, "Keep current workspaces focused on plugin init/reload", false);
+    g_config.enableNotifications = Config::Values::makeConfigValue<Config::Values::Bool>(k_enableNotifications, "Enable plugin notifications", false);
+    g_config.enablePersistentWorkspaces = Config::Values::makeConfigValue<Config::Values::Bool>(k_enablePersistentWorkspaces, "Enable persistent workspaces", true);
+    g_config.enableWrapping = Config::Values::makeConfigValue<Config::Values::Bool>(k_enableWrapping, "Enable workspace wrapping", true);
+    g_config.linkMonitors = Config::Values::makeConfigValue<Config::Values::Bool>(k_linkMonitors, "Enable gnome-like workspace switching", false);
+    g_config.enableHy3 = Config::Values::makeConfigValue<Config::Values::Bool>(k_enableHy3, "Enable Hy3 support", true);
 
-    Log::logger->log(Log::INFO, "[split-monitor-workspaces] Adding config values to Hyprland (lua)");
-
-    g_config.workspaceCount = Config::Values::makeConfigValue<Config::Values::Int>(translateConfigKey(k_workspaceCount), "How many workspaces to bind to the monitor", 10);
-    g_config.keepFocused = Config::Values::makeConfigValue<Config::Values::Bool>(translateConfigKey(k_keepFocused), "Keep current workspaces focused on plugin init/reload", false);
-    g_config.enableNotifications = Config::Values::makeConfigValue<Config::Values::Bool>(translateConfigKey(k_enableNotifications), "Enable plugin notifications", false);
-    g_config.enablePersistentWorkspaces = Config::Values::makeConfigValue<Config::Values::Bool>(translateConfigKey(k_enablePersistentWorkspaces), "Enable persistent workspaces", true);
-    g_config.enableWrapping = Config::Values::makeConfigValue<Config::Values::Bool>(translateConfigKey(k_enableWrapping), "Enable workspace wrapping", true);
-    g_config.linkMonitors = Config::Values::makeConfigValue<Config::Values::Bool>(translateConfigKey(k_linkMonitors), "Enable gnome-like workspace switching", false);
-    g_config.enableHy3 = Config::Values::makeConfigValue<Config::Values::Bool>(translateConfigKey(k_enableHy3), "Enable Hy3 support", true);
-
+    Log::logger->log(Log::INFO, "[split-monitor-workspaces] Adding config values to Hyprland");
     HyprlandAPI::addConfigValueV2(PHANDLE, g_config.workspaceCount);
     HyprlandAPI::addConfigValueV2(PHANDLE, g_config.keepFocused);
     HyprlandAPI::addConfigValueV2(PHANDLE, g_config.enableNotifications);
@@ -632,6 +629,8 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     HyprlandAPI::addConfigValueV2(PHANDLE, g_config.linkMonitors);
     HyprlandAPI::addConfigValueV2(PHANDLE, g_config.enableHy3);
 
+    auto const configType = Config::mgr()->type();
+    Log::logger->log(Log::INFO, "[split-monitor-workspaces] Detected config type: {}", configTypeToString(configType));
     switch (configType) {
         case Config::CONFIG_LEGACY: {
             Log::logger->log(Log::INFO, "[split-monitor-workspaces] Adding config keywords to Hyprland (legacy)");

@@ -55,13 +55,13 @@ struct MonitorConfigValue {
 };
 
 struct SPluginConfig {
-    SP<Config::Values::IValue> workspaceCount;
-    SP<Config::Values::IValue> keepFocused;
-    SP<Config::Values::IValue> enableNotifications;
-    SP<Config::Values::IValue> enablePersistentWorkspaces;
-    SP<Config::Values::IValue> enableWrapping;
-    SP<Config::Values::IValue> linkMonitors;
-    SP<Config::Values::IValue> enableHy3;
+    SP<Config::Values::Int> workspaceCount;
+    SP<Config::Values::Bool> keepFocused;
+    SP<Config::Values::Bool> enableNotifications;
+    SP<Config::Values::Bool> enablePersistentWorkspaces;
+    SP<Config::Values::Bool> enableWrapping;
+    SP<Config::Values::Bool> linkMonitors;
+    SP<Config::Values::Bool> enableHy3;
 };
 
 ///////////////  Global state ///////////////
@@ -70,13 +70,7 @@ inline HANDLE PHANDLE = nullptr;
 
 inline SPluginConfig g_config;
 
-inline int g_workspaceCount = 0;
-inline bool g_keepFocused = false;
-inline bool g_enableNotifications = false;
-inline bool g_enablePersistentWorkspaces = true;
-inline bool g_enableWrapping = true;
 inline std::string g_defaultMonitor;
-inline bool g_linkMonitors = false;
 inline Hy3Status g_hy3Status = Hy3Status::DETECTION_PENDING;
 
 // the first time we load the plugin, we want to switch to the first workspace on the primary monitor regardless of keepFocused

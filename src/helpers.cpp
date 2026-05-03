@@ -28,7 +28,7 @@ const char* translateConfigKey(const char* rawKey)
 
 void raiseNotification(const std::string& message, float timeout)
 {
-    if (g_enableNotifications) {
+    if (g_config.enableNotifications->value()) {
         HyprlandAPI::addNotification(PHANDLE, message, s_pluginColor, timeout);
     }
 }
@@ -101,12 +101,13 @@ int directionToDelta(const std::string& direction)
 int64_t getMonitorMaxWorkspaces(const std::string& name)
 {
     // avoid default initialization with []
-    return g_vMonitorMaxWorkspaces.contains(name) ? g_vMonitorMaxWorkspaces[name] : g_workspaceCount;
+    return g_vMonitorMaxWorkspaces.contains(name) ? g_vMonitorMaxWorkspaces[name] : g_config.workspaceCount->value();
 }
 
 PHLMONITOR getPrimaryMonitor()
 {
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Determining primary monitor");
+
     // The hyprland config can specify a default monitor to focus on startup, the plugin respects that setting
     if (!g_defaultMonitor.empty()) {
         for (const PHLMONITOR& monitor : g_pCompositor->m_monitors) {
@@ -192,14 +193,14 @@ const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, const std:
     }
 
     if (workspaceIndex < 0) {
-        if (g_enableWrapping) {
+        if (g_config.enableWrapping->value()) {
             return curWorkspaces.back(); // wrap around to the last workspace
         }
         return curWorkspaces.front(); // stop at the first workspace
     }
 
     if (static_cast<size_t>(workspaceIndex) >= curWorkspaces.size()) {
-        if (g_enableWrapping) {
+        if (g_config.enableWrapping->value()) {
             return curWorkspaces.front(); // wrap around to the first workspace
         }
         return curWorkspaces.back(); // stop at the last workspace

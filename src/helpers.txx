@@ -2,53 +2,92 @@
 
 #include <hyprland/src/config/ConfigManager.hpp>
 #include <hyprland/src/debug/log/Logger.hpp>
+#include <hyprland/src/macros.hpp>
+#include <hyprlang.hpp>
+#include <typeindex>
 
 template <typename T> auto getConfigValue(const char* paramName)
 {
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Getting config value {}", paramName);
 
     const auto reply = Config::mgr()->getConfigValue(paramName);
-    if (reply.dataptr == nullptr || *reply.dataptr == nullptr) {
+    if (!reply.dataptr || !reply.type) {
         Log::logger->log(Log::WARN, "[split-monitor-workspaces] Failed to get config value {}", paramName);
-        if constexpr (std::is_same_v<T, Config::STRING> || std::is_same_v<T, const char*>)
+        if constexpr (std::is_same_v<T, Config::STRING> || std::is_same_v<T, Hyprlang::STRING>)
             return std::string{};
         else
             return T{0};
     }
 
-    const auto* const paramPtr = reinterpret_cast<const T*>(*reply.dataptr);
-    if (paramPtr == nullptr) {
-        Log::logger->log(Log::WARN, "[split-monitor-workspaces] Config value {} was null", paramName);
-        if constexpr (std::is_same_v<T, Config::STRING> || std::is_same_v<T, const char*>)
-            return std::string{};
-        else
-            return T{0};
-    }
+    void* const* VAL = reply.dataptr;
+    const std::type_index TYPE = std::type_index(*reply.type);
 
-    if constexpr (std::is_same_v<T, Config::STRING> || std::is_same_v<T, const char*>) {
-        const char* rawStr = nullptr;
-        if constexpr (std::is_same_v<T, const char*>) {
-            // Hyprlang::STRING = const char*, which stores empty strings as nullptr.
-            // std::format("{}", nullptr) is UB and crashes, so guard before logging.
-            rawStr = *paramPtr;
-            if (rawStr == nullptr) {
-                Log::logger->log(Log::DEBUG, "[split-monitor-workspaces] Config value {} is empty", paramName);
+    if constexpr (std::is_same_v<T, Config::STRING> || std::is_same_v<T, Hyprlang::STRING>) {
+        if (TYPE == typeid(Config::STRING)) {
+            const std::string* p = *reinterpret_cast<const std::string* const*>(VAL);
+            if (!p)
                 return std::string{};
-            }
+            auto s = *p;
+            if (s == STRVAL_EMPTY)
+                s.clear();
+            if (s.size() >= 2 && s.front() == '"' && s.back() == '"')
+                s = s.substr(1, s.size() - 2);
+            Log::logger->log(Log::INFO, "[split-monitor-workspaces] Got config value {}: {}", paramName, s);
+            return s;
         }
-        else {
-            rawStr = paramPtr->c_str();
+
+        if (TYPE == typeid(Hyprlang::STRING) || TYPE == typeid(const char*)) {
+            const char* p = *reinterpret_cast<const char* const*>(VAL);
+            if (!p)
+                return std::string{};
+            std::string s = p;
+            Log::logger->log(Log::INFO, "[split-monitor-workspaces] Got config value {}: {}", paramName, s);
+            return s;
         }
-        auto paramStr = std::string{rawStr};
-        // strip leading and trailing quotes if any (god I hate toml)
-        if (paramStr.size() >= 2 && paramStr.front() == '"' && paramStr.back() == '"') {
-            paramStr = paramStr.substr(1, paramStr.size() - 2);
-        }
-        Log::logger->log(Log::INFO, "[split-monitor-workspaces] Got config value {}: {}", paramName, paramStr);
-        return paramStr;
+
+        Log::logger->log(Log::WARN, "[split-monitor-workspaces] Config value {} has unexpected type {}", paramName, reply.type->name());
+        return std::string{};
     }
     else {
-        Log::logger->log(Log::INFO, "[split-monitor-workspaces] Got config value {}: {}", paramName, *paramPtr);
-        return *paramPtr;
+        if (TYPE == typeid(T)) {
+            const T* p = *reinterpret_cast<const T* const*>(VAL);
+            if (!p)
+                return T{0};
+            Log::logger->log(Log::INFO, "[split-monitor-workspaces] Got config value {}: {}", paramName, *p);
+            return *p;
+        }
+
+        if (TYPE == typeid(Config::STRING)) {
+            const std::string* p = *reinterpret_cast<const std::string* const*>(VAL);
+            if (!p)
+                return T{0};
+            try {
+                if constexpr (std::is_integral_v<T>)
+                    return static_cast<T>(std::stoll(*p));
+                else if constexpr (std::is_floating_point_v<T>)
+                    return static_cast<T>(std::stod(*p));
+            }
+            catch (...) {
+                return T{0};
+            }
+        }
+
+        if (TYPE == typeid(Hyprlang::STRING) || TYPE == typeid(const char*)) {
+            const char* p = *reinterpret_cast<const char* const*>(VAL);
+            if (!p)
+                return T{0};
+            try {
+                if constexpr (std::is_integral_v<T>)
+                    return static_cast<T>(std::stoll(p));
+                else if constexpr (std::is_floating_point_v<T>)
+                    return static_cast<T>(std::stod(p));
+            }
+            catch (...) {
+                return T{0};
+            }
+        }
+
+        Log::logger->log(Log::WARN, "[split-monitor-workspaces] Type mismatch reading config {} (asked {}, got {}), returning default", paramName, typeid(T).name(), reply.type->name());
+        return T{0};
     }
 }

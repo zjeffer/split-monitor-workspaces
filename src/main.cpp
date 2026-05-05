@@ -396,7 +396,8 @@ void loadConfigValues()
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Loading config values");
 
     try {
-        g_defaultMonitor = getConfigValue<Hyprlang::STRING>(k_defaultMonitor);
+        g_defaultMonitor = getConfigValue<Hyprlang::STRING>(translateConfigKey(k_defaultMonitor));
+        Log::logger->log(Log::INFO, "[split-monitor-workspaces] Default monitor from config: '{}'", g_defaultMonitor);
 
         if (g_config.enableHy3->value()) {
             g_hy3Status = Hy3Status::DETECTION_PENDING; // reset so it re-checks on next use
@@ -627,13 +628,13 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     PHANDLE = handle;
 
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Creating config values");
-    g_config.workspaceCount = Config::Values::makeConfigValue<Config::Values::Int>(k_workspaceCount, "How many workspaces to bind to the monitor", 10);
-    g_config.keepFocused = Config::Values::makeConfigValue<Config::Values::Bool>(k_keepFocused, "Keep current workspaces focused on plugin init/reload", false);
-    g_config.enableNotifications = Config::Values::makeConfigValue<Config::Values::Bool>(k_enableNotifications, "Enable plugin notifications", false);
-    g_config.enablePersistentWorkspaces = Config::Values::makeConfigValue<Config::Values::Bool>(k_enablePersistentWorkspaces, "Enable persistent workspaces", true);
-    g_config.enableWrapping = Config::Values::makeConfigValue<Config::Values::Bool>(k_enableWrapping, "Enable workspace wrapping", true);
-    g_config.linkMonitors = Config::Values::makeConfigValue<Config::Values::Bool>(k_linkMonitors, "Enable gnome-like workspace switching", false);
-    g_config.enableHy3 = Config::Values::makeConfigValue<Config::Values::Bool>(k_enableHy3, "Enable Hy3 support", true);
+    g_config.workspaceCount = Config::Values::makeConfigValue<Config::Values::Int>(translateConfigKey(k_workspaceCount), "How many workspaces to bind to the monitor", 10);
+    g_config.keepFocused = Config::Values::makeConfigValue<Config::Values::Bool>(translateConfigKey(k_keepFocused), "Keep current workspaces focused on plugin init/reload", false);
+    g_config.enableNotifications = Config::Values::makeConfigValue<Config::Values::Bool>(translateConfigKey(k_enableNotifications), "Enable plugin notifications", false);
+    g_config.enablePersistentWorkspaces = Config::Values::makeConfigValue<Config::Values::Bool>(translateConfigKey(k_enablePersistentWorkspaces), "Enable persistent workspaces", true);
+    g_config.enableWrapping = Config::Values::makeConfigValue<Config::Values::Bool>(translateConfigKey(k_enableWrapping), "Enable workspace wrapping", true);
+    g_config.linkMonitors = Config::Values::makeConfigValue<Config::Values::Bool>(translateConfigKey(k_linkMonitors), "Enable gnome-like workspace switching", false);
+    g_config.enableHy3 = Config::Values::makeConfigValue<Config::Values::Bool>(translateConfigKey(k_enableHy3), "Enable Hy3 support", true);
 
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Adding config values to Hyprland");
     HyprlandAPI::addConfigValueV2(PHANDLE, g_config.workspaceCount);
@@ -651,8 +652,8 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
             Log::logger->log(Log::INFO, "[split-monitor-workspaces] Adding config keywords to Hyprland (legacy)");
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-            HyprlandAPI::addConfigKeyword(PHANDLE, k_monitorPriority, monitorPriorityConfigHandler, (Hyprlang::SHandlerOptions){.allowFlags = false});
-            HyprlandAPI::addConfigKeyword(PHANDLE, k_monitorMaxWorkspaces, monitorMaxWorkspacesConfigHandler, (Hyprlang::SHandlerOptions){.allowFlags = false});
+            HyprlandAPI::addConfigKeyword(PHANDLE, translateConfigKey(k_monitorPriority), monitorPriorityConfigHandler, (Hyprlang::SHandlerOptions){.allowFlags = false});
+            HyprlandAPI::addConfigKeyword(PHANDLE, translateConfigKey(k_monitorMaxWorkspaces), monitorMaxWorkspacesConfigHandler, (Hyprlang::SHandlerOptions){.allowFlags = false});
 #pragma GCC diagnostic pop
 
             Log::logger->log(Log::INFO, "[split-monitor-workspaces] Registering dispatchers");

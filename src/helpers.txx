@@ -10,14 +10,22 @@ template <typename T> auto getConfigValue(const char* paramName)
 {
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Getting config value {}", paramName);
 
+    if (Config::mgr()->type() == Config::CONFIG_LUA) {
+        const auto* const value = Config::mgr()->getConfigValue(paramName).dataptr;
+        if (value == nullptr) {
+            Log::logger->log(Log::ERR, "[split-monitor-workspaces] Config value {} not found", paramName);
+            throw std::runtime_error("Config value not found: " + std::string(paramName));
+        }
+        return reinterpret_cast<T>(*value);
+    }
+
     // TODO: remove call to deprecated getConfigValue function when fully transitioning to lua config system (sometime after v0.55 probably)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void* const* dataPtr = HyprlandAPI::getConfigValue(PHANDLE, paramName)->getDataStaticPtr();
 #pragma GCC diagnostic pop
     if (dataPtr == nullptr) {
-        Log::logger->log(Log::ERR, "[split-monitor-workspaces] Config value {} not found", paramName);
-        throw std::runtime_error("Config value not found: " + std::string(paramName));
+        Log::logger->log(Log::WARN, "[split-monitor-workspaces] Config value {} not found", paramName);
     }
 
     if constexpr (std::is_same_v<T, Hyprlang::STRING>) {

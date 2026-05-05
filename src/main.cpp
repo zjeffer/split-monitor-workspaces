@@ -288,15 +288,20 @@ void unmapMonitor(const PHLMONITOR& monitor)
 void unmapAllMonitors()
 {
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Unmapping all monitors");
-    while (!g_vMonitorWorkspaceMap.empty()) {
-        auto [monitorID, workspaces] = *g_vMonitorWorkspaceMap.begin();
-        PHLMONITOR monitor = g_pCompositor->getMonitorFromID(monitorID);
-        if (monitor != nullptr) {
-            unmapMonitor(monitor); // will remove the monitor from the map
+    try {
+        while (!g_vMonitorWorkspaceMap.empty()) {
+            auto [monitorID, workspaces] = *g_vMonitorWorkspaceMap.begin();
+            PHLMONITOR monitor = g_pCompositor->getMonitorFromID(monitorID);
+            if (monitor != nullptr) {
+                unmapMonitor(monitor); // will remove the monitor from the map
+            }
+            else {
+                g_vMonitorWorkspaceMap.erase(monitorID); // remove it manually
+            }
         }
-        else {
-            g_vMonitorWorkspaceMap.erase(monitorID); // remove it manually
-        }
+    }
+    catch (const std::exception& e) {
+        Log::logger->log(Log::ERR, "[split-monitor-workspaces] Exception while unmapping monitors: {}", e.what());
     }
     g_vMonitorWorkspaceMap.clear();
     g_vPersistentWorkspaces.clear();
@@ -390,26 +395,36 @@ void loadConfigValues()
 {
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Loading config values");
 
-    g_defaultMonitor = getConfigValue<Config::STRING>(k_defaultMonitor);
+    try {
+        g_defaultMonitor = getConfigValue<Hyprlang::STRING>(k_defaultMonitor);
 
-    if (g_config.enableHy3->value()) {
-        g_hy3Status = Hy3Status::DETECTION_PENDING; // reset so it re-checks on next use
-    }
-    else {
-        g_hy3Status = Hy3Status::DISABLED;
-    }
+        if (g_config.enableHy3->value()) {
+            g_hy3Status = Hy3Status::DETECTION_PENDING; // reset so it re-checks on next use
+        }
+        else {
+            g_hy3Status = Hy3Status::DISABLED;
+        }
 
-    if (Config::mgr()->type() == Config::CONFIG_LUA) {
-        loadMonitorPriority(getConfigValue<Config::STRING>(translateConfigKey(k_monitorPriority)));
-        loadMonitorMaxWorkspaces(getConfigValue<Config::STRING>(translateConfigKey(k_monitorMaxWorkspaces)));
+        if (Config::mgr()->type() == Config::CONFIG_LUA) {
+            loadMonitorPriority(getConfigValue<Hyprlang::STRING>(translateConfigKey(k_monitorPriority)));
+            loadMonitorMaxWorkspaces(getConfigValue<Hyprlang::STRING>(translateConfigKey(k_monitorMaxWorkspaces)));
+        }
+    }
+    catch (const std::exception& e) {
+        Log::logger->log(Log::ERR, "[split-monitor-workspaces] Exception while loading config values: {}", e.what());
     }
 }
 
 void reload()
 {
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Reloading plugin configuration");
-    loadConfigValues();
-    remapAllMonitors();
+    try {
+        loadConfigValues();
+        remapAllMonitors();
+    }
+    catch (const std::exception& e) {
+        Log::logger->log(Log::ERR, "[split-monitor-workspaces] Exception during reload: {}", e.what());
+    }
     g_firstLoad = false;
 }
 

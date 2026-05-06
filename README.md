@@ -11,7 +11,9 @@ A small plugin to provide `awesome`/`dwm`-like behavior with workspaces: split t
 # Installing
 
 ## Using [hyprpm](https://wiki.hyprland.org/Plugins/Using-Plugins/#hyprpm)
-Hyprpm is a tool integrated with the latest Hyprland version, to use it first you'll need to add the repository and then enable the plugin
+Hyprpm is a tool integrated with the latest Hyprland version, to use it first you'll need to add the repository and then enable the plugin.
+The plugin builds with `meson`, so make sure you install that first.
+
 ```BASH
 hyprpm add https://github.com/zjeffer/split-monitor-workspaces # Add the plugin repository
 hyprpm enable split-monitor-workspaces # Enable the plugin

@@ -424,6 +424,7 @@ void reload()
         remapAllMonitors();
     }
     catch (const std::exception& e) {
+        raiseNotification("[split-monitor-workspaces] Failed to reload config, see logs for details");
         Log::logger->log(Log::ERR, "[split-monitor-workspaces] Exception during reload: {}", e.what());
     }
     g_firstLoad = false;

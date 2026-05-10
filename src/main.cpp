@@ -396,23 +396,45 @@ void loadConfigValues()
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Loading config values");
 
     try {
-        g_defaultMonitor = getConfigValue<Hyprlang::STRING>(translateConfigKey(k_defaultMonitor));
-        Log::logger->log(Log::INFO, "[split-monitor-workspaces] Default monitor from config: '{}'", g_defaultMonitor);
+        auto defaultMonitor = getConfigValue<Config::STRING>(translateConfigKey(k_defaultMonitor));
+        if (defaultMonitor.has_value()) {
+            g_defaultMonitor = defaultMonitor.value();
+            Log::logger->log(Log::INFO, "[split-monitor-workspaces] Default monitor from config: '{}'", g_defaultMonitor);
+        }
+        else {
+            Log::logger->log(Log::INFO, "[split-monitor-workspaces] No default monitor specified in config");
+        }
+    }
+    catch (const std::exception& e) {
+        Log::logger->log(Log::WARN, "[split-monitor-workspaces] Failed to get default monitor from config: {}", e.what());
+    }
 
+    try {
         if (g_config.enableHy3->value()) {
             g_hy3Status = Hy3Status::DETECTION_PENDING; // reset so it re-checks on next use
         }
         else {
             g_hy3Status = Hy3Status::DISABLED;
         }
-
-        if (Config::mgr()->type() == Config::CONFIG_LUA) {
-            loadMonitorPriority(getConfigValue<Hyprlang::STRING>(translateConfigKey(k_monitorPriority)));
-            loadMonitorMaxWorkspaces(getConfigValue<Hyprlang::STRING>(translateConfigKey(k_monitorMaxWorkspaces)));
-        }
     }
     catch (const std::exception& e) {
-        Log::logger->log(Log::ERR, "[split-monitor-workspaces] Exception while loading config values: {}", e.what());
+        Log::logger->log(Log::ERR, "[split-monitor-workspaces] Exception while loading Hy3 status from config: {}", e.what());
+    }
+
+    if (Config::mgr()->type() == Config::CONFIG_LUA) {
+        try {
+            auto monitorPriority = getConfigValue<Config::STRING>(translateConfigKey(k_monitorPriority));
+            if (monitorPriority.has_value()) {
+                loadMonitorPriority(monitorPriority.value());
+            }
+            auto monitorMaxWorkspaces = getConfigValue<Config::STRING>(translateConfigKey(k_monitorMaxWorkspaces));
+            if (monitorMaxWorkspaces.has_value()) {
+                loadMonitorMaxWorkspaces(monitorMaxWorkspaces.value());
+            }
+        }
+        catch (const std::exception& e) {
+            Log::logger->log(Log::ERR, "[split-monitor-workspaces] Exception while loading monitor configuration: {}", e.what());
+        }
     }
 }
 

@@ -13,7 +13,7 @@ struct lua_State;
 const char* translateConfigKey(const char* rawKey);
 
 // Get a config value of the specified type.
-template <typename T> auto getConfigValue(const char* paramName);
+template <typename T> std::optional<T> getConfigValue(const char* paramName);
 
 // Raise a Hyprland notification. Nullop if notifications are disabled in the plugin config.
 void raiseNotification(const std::string& message, float timeout = 5000.0F);

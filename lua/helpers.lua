@@ -24,7 +24,6 @@ function helpers.direction_to_delta(value)
 	if value == "next" then return 1 end
 	if value == "prev" then return -1 end
 	local n = tonumber(value)
-	print("[split-monitor-workspaces] Parsed direction value '" .. tostring(value) .. "' as delta " .. tostring(n))
 	return n and math.floor(n) or 0
 end
 

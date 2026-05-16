@@ -45,8 +45,6 @@ function monitors.map_monitor(monitor)
 		table.insert(globals.monitor_workspace_map[monitor.id], ws_name)
 
 		local ws = hl.get_workspace(ws_name)
-		print(string.format("[split-monitor-workspaces] Checking workspace %s for monitor %s: %s",
-			ws_name, monitor.name, ws and "exists" or "does not exist"))
 		if ws ~= nil then
 			-- workspace already exists on some other monitor; move it here
 			print("[split-monitor-workspaces] Moving existing workspace " .. ws_name .. " to monitor " .. monitor.name)

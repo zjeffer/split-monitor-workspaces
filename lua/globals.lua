@@ -12,43 +12,40 @@ local globals = {}
 -- ============================================================
 
 globals.cfg = {
-    -- Number of workspaces to assign to each monitor.
-    workspace_count = 10,
+	-- Number of workspaces to assign to each monitor.
+	workspace_count = 10,
 
-    -- If true, keep current workspaces focused on plugin init/reload.
-    keep_focused = false,
+	-- If true, keep current workspaces focused on plugin init/reload.
+	keep_focused = false,
 
-    -- If true, show a Hyprland notification on remap and init.
-    enable_notifications = false,
+	-- If true, show a Hyprland notification on remap and init.
+	enable_notifications = false,
 
-    -- If true, workspaces are kept alive even when empty.
-    enable_persistent_workspaces = true,
+	-- If true, workspaces are kept alive even when empty.
+	enable_persistent_workspaces = true,
 
-    -- If true, cycling past the last/first workspace wraps around.
-    enable_wrapping = true,
+	-- If true, cycling past the last/first workspace wraps around.
+	enable_wrapping = true,
 
-    -- If true, switching workspaces changes all monitors simultaneously (Gnome-style).
-    link_monitors = false,
+	-- If true, switching workspaces changes all monitors simultaneously (Gnome-style).
+	link_monitors = false,
 
-    -- If true, use hy3 dispatchers for move operations.
-    enable_hy3 = false,
+	-- List of monitor names in priority order (determines workspace range allocation).
+	-- e.g. { "DP-1", "HDMI-1" }
+	-- Monitors not listed get priorities assigned in the order Hyprland reports them.
+	monitor_priority = {},
 
-    -- List of monitor names in priority order (determines workspace range allocation).
-    -- e.g. { "DP-1", "HDMI-1" }
-    -- Monitors not listed get priorities assigned in the order Hyprland reports them.
-    monitor_priority = {},
+	-- Per-monitor workspace count overrides.
+	-- e.g. { ["DP-1"] = 5, ["HDMI-1"] = 3 }
+	max_workspaces = {},
 
-    -- Per-monitor workspace count overrides.
-    -- e.g. { ["DP-1"] = 5, ["HDMI-1"] = 3 }
-    max_workspaces = {},
+	-- Upper bound on number of monitors for pre-declaring persistence rules.
+	-- Raise this if you connect more monitors than this value.
+	max_monitors = 10,
 
-    -- Upper bound on number of monitors for pre-declaring persistence rules.
-    -- Raise this if you connect more monitors than this value.
-    max_monitors = 10,
-
-    -- Name of the monitor to focus on startup/reload.
-    -- Same as cursor:default_monitor in the Hyprland config.
-    default_monitor = "",
+	-- Name of the monitor to focus on startup/reload.
+	-- Same as cursor:default_monitor in the Hyprland config.
+	default_monitor = "",
 }
 
 -- ============================================================

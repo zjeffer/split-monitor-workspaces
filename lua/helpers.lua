@@ -10,7 +10,7 @@ local helpers = {}
 
 function helpers.notify(msg)
     if globals.cfg.enable_notifications then
-        hl.notification("info", "[split-monitor-workspaces]", msg)
+        hl.notification.create({ text = "[split-monitor-workspaces] " .. msg, duration = 5000, icon = "info" })
     end
 end
 

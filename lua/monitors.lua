@@ -57,17 +57,17 @@ function monitors.map_monitor(monitor)
         local ws = hl.get_workspace(ws_name)
         if ws ~= nil then
             -- workspace already exists on some other monitor; move it here
-            hl.exec_raw("dispatch moveworkspacetomonitor " .. ws_name .. " " .. monitor.name)
+            hl.dispatch(hl.dsp.workspace.move({ workspace = ws_name, monitor = monitor.name }))
         elseif globals.cfg.enable_persistent_workspaces and i == start_i then
             -- eagerly create and assign the first workspace so the monitor has
             -- something to display; the rest are created on demand
-            hl.exec_raw("dispatch workspace " .. ws_name)
-            hl.exec_raw("dispatch moveworkspacetomonitor " .. ws_name .. " " .. monitor.name)
+            hl.dispatch(hl.dsp.focus({ workspace = ws_name }))
+            hl.dispatch(hl.dsp.workspace.move({ workspace = ws_name, monitor = monitor.name }))
         end
     end
 
     if not globals.cfg.keep_focused or globals.first_load then
-        hl.exec_raw("dispatch workspace " .. tostring(start_i))
+        hl.dispatch(hl.dsp.focus({ workspace = tostring(start_i) }))
     end
 end
 
@@ -121,7 +121,7 @@ function monitors.remap_all_monitors()
         if primary then
             local ws_list = globals.monitor_workspace_map[primary.id]
             if ws_list and #ws_list > 0 then
-                hl.exec_raw("dispatch workspace " .. ws_list[1])
+                hl.dispatch(hl.dsp.focus({ workspace = ws_list[1] }))
             end
         end
     end

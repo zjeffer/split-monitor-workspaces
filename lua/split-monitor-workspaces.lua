@@ -98,4 +98,8 @@ function api.setup(user_config)
     print("[split-monitor-workspaces] Setup complete. Workspaces will be mapped after config.reloaded.")
 end
 
+function api.get_amount_of_workspaces()
+	return globals.cfg.workspace_count
+end
+
 return api

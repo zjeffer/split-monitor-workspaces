@@ -42,17 +42,16 @@ smw.setup({
     -- default_monitor = "DP-1",
 })
 
--- Switch to workspace N on the current monitor (1-indexed).
-for i = 1, 10 do
+for i = 1, smw.get_amount_of_workspaces() do
     local n = tostring(i)
-    hl.bind("SUPER, " .. n,       smw.workspace(n))
-    hl.bind("SUPER SHIFT, " .. n, smw.move_to_workspace(n))
-    hl.bind("SUPER ALT, " .. n,   smw.move_to_workspace_silent(n))
+    hl.bind("SUPER, " .. n, smw.workspace(n))                      -- Switch to workspace N.
+    hl.bind("SUPER SHIFT, " .. n, smw.move_to_workspace(n))        -- Move the active window to workspace N and follow it.
+    hl.bind("SUPER ALT, " .. n, smw.move_to_workspace_silent(n))   -- Move the active window to workspace N silently (no focus change).
 end
 
 -- Cycle workspaces on the current monitor.
 hl.bind("SUPER, mouse_down", smw.cycle_workspaces("next"))
-hl.bind("SUPER, mouse_up",   smw.cycle_workspaces("prev"))
+hl.bind("SUPER, mouse_up", smw.cycle_workspaces("prev"))
 
 -- Move orphaned windows (not assigned to any mapped workspace) to the current workspace.
 hl.bind("SUPER, G", smw.grab_rogue_windows())

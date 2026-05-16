@@ -22,18 +22,18 @@ function dispatchers.do_workspace(workspace_str)
             local resolved = helpers.get_workspace_from_monitor(monitor, workspace_str)
             -- create the workspace if it does not yet exist
             if hl.get_workspace(resolved) == nil then
-                hl.exec_raw("dispatch workspace " .. resolved)
+                hl.dispatch(hl.dsp.focus({ workspace = resolved }))
             end
-            hl.exec_raw("dispatch moveworkspacetomonitor " .. resolved .. " " .. monitor.name)
+            hl.dispatch(hl.dsp.workspace.move({ workspace = resolved, monitor = monitor.name }))
             if current and monitor.id == current.id then
-                hl.exec_raw("dispatch workspace " .. resolved)
+                hl.dispatch(hl.dsp.focus({ workspace = resolved }))
             end
         end
     else
         local monitor = helpers.get_current_monitor()
         if not monitor then return end
         local resolved = helpers.get_workspace_from_monitor(monitor, workspace_str)
-        hl.exec_raw("dispatch workspace " .. resolved)
+        hl.dispatch(hl.dsp.focus({ workspace = resolved }))
     end
 end
 
@@ -78,12 +78,12 @@ function dispatchers.do_cycle_workspaces(value, no_wrap)
 
         local target = ws_list[idx]
         if globals.cfg.link_monitors then
-            hl.exec_raw("dispatch moveworkspacetomonitor " .. target .. " " .. monitor.name)
+            hl.dispatch(hl.dsp.workspace.move({ workspace = target, monitor = monitor.name }))
             if monitor.focused then
-                hl.exec_raw("dispatch workspace " .. target)
+                hl.dispatch(hl.dsp.focus({ workspace = target }))
             end
         else
-            hl.exec_raw("dispatch workspace " .. target)
+            hl.dispatch(hl.dsp.focus({ workspace = target }))
         end
 
         ::continue::
@@ -101,15 +101,15 @@ function dispatchers.do_move_to_workspace(workspace_str, silent)
 
     if globals.cfg.enable_hy3 then
         if silent then
-            hl.exec_raw("dispatch hy3:movetoworkspace " .. resolved)
+            hl.dispatch(hl.dsp.exec_cmd("hyprctl dispatch hy3:movetoworkspace " .. resolved))
         else
-            hl.exec_raw("dispatch hy3:movetoworkspace " .. resolved .. ",follow")
+            hl.dispatch(hl.dsp.exec_cmd("hyprctl dispatch hy3:movetoworkspace " .. resolved .. ",follow"))
         end
     else
         if silent then
-            hl.exec_raw("dispatch movetoworkspacesilent " .. resolved)
+            hl.dispatch(hl.dsp.window.move({ workspace = resolved, follow = false }))
         else
-            hl.exec_raw("dispatch movetoworkspace " .. resolved)
+            hl.dispatch(hl.dsp.window.move({ workspace = resolved }))
         end
     end
 
@@ -147,7 +147,7 @@ function dispatchers.do_grab_rogue_windows()
                 "[split-monitor-workspaces] Moving rogue window '%s' from workspace %s to %s",
                 window.title, window.workspace.name, current_ws.name))
             -- use the address selector to target a specific non-active window
-            hl.exec_raw("dispatch movetoworkspacesilent " .. current_ws.name .. ",address:" .. window.address)
+            hl.dispatch(hl.dsp.window.move({ workspace = current_ws.name, window = window, follow = false }))
         end
 
         ::continue::

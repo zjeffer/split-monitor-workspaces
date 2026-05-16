@@ -55,9 +55,6 @@ globals.monitor_priorities = {}
 -- Per-monitor workspace count overrides loaded from cfg.max_workspaces.
 globals.monitor_max_ws_override = {}
 
--- True until the first config.reloaded event has been processed.
-globals.first_load = true
-
 -- Event subscription handles.
 -- Stored here to prevent Lua's garbage collector from destroying them.
 globals.event_handles = {}

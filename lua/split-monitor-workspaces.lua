@@ -87,7 +87,6 @@ function api.setup(user_config)
 			if not p.from_config then globals.monitor_max_ws_override[name] = nil end
 		end
 		monitors.remap_all_monitors()
-		globals.first_load = false
 	end)
 
 	helpers.notify("Initialized successfully!")

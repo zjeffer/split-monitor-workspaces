@@ -34,6 +34,16 @@ function monitors.map_monitor(monitor)
 	print(string.format("[split-monitor-workspaces] Mapping workspaces %d-%d to monitor %s",
 		start_i, end_i, monitor.name))
 
+	-- Snapshot the monitor's active workspace *before* we touch anything.
+	-- Used below to decide whether to switch focus when keep_focused is true:
+	-- if the monitor is already showing a workspace in its assigned range we
+	-- leave it alone; otherwise we initialise it to the first workspace.
+	local prev_ws     = hl.get_active_workspace(monitor)
+	local prev_ws_num = prev_ws and tonumber(prev_ws.name)
+	local in_range    = prev_ws_num ~= nil
+		and prev_ws_num >= start_i
+		and prev_ws_num <= end_i
+
 	globals.monitor_workspace_map[monitor.id] = {}
 	if globals.cfg.enable_persistent_workspaces then
 		for i = start_i, end_i do
@@ -57,9 +67,14 @@ function monitors.map_monitor(monitor)
 		end
 	end
 
-	if not globals.cfg.keep_focused or globals.first_load then
+	-- Switch to the first workspace when keep_focused is off, or when the
+	-- monitor is not already showing one of its assigned workspaces (which
+	-- happens on first startup or after a monitor reconnect).
+	local switched = not globals.cfg.keep_focused or not in_range
+	if switched then
 		hl.dispatch(hl.dsp.focus({ workspace = tostring(start_i) }))
 	end
+	return switched
 end
 
 -- ============================================================
@@ -114,11 +129,19 @@ function monitors.remap_all_monitors()
 	print("[split-monitor-workspaces] Remapping all monitors")
 	monitors.unmap_all_monitors()
 
+	local any_switched = false
 	for _, monitor in ipairs(hl.get_monitors()) do
-		monitors.map_monitor(monitor)
+		if monitors.map_monitor(monitor) then
+			any_switched = true
+		end
 	end
 
-	if not globals.cfg.keep_focused or globals.first_load then
+	-- If any monitor had to switch workspace (i.e. keep_focused is off, or at
+	-- least one monitor was being initialised for the first time), bring focus
+	-- back to the primary monitor so the session always starts on the right
+	-- screen.  When keep_focused is true and every monitor was already showing
+	-- the correct workspace, no focus change is needed at all.
+	if any_switched then
 		local primary = helpers.get_primary_monitor()
 		if primary then
 			local ws_list = globals.monitor_workspace_map[primary.id]

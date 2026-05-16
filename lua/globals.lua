@@ -38,14 +38,6 @@ globals.cfg = {
 	-- Per-monitor workspace count overrides.
 	-- e.g. { ["DP-1"] = 5, ["HDMI-1"] = 3 }
 	max_workspaces = {},
-
-	-- Upper bound on number of monitors for pre-declaring persistence rules.
-	-- Raise this if you connect more monitors than this value.
-	max_monitors = 10,
-
-	-- Name of the monitor to focus on startup/reload.
-	-- Same as cursor:default_monitor in the Hyprland config.
-	default_monitor = "",
 }
 
 -- ============================================================

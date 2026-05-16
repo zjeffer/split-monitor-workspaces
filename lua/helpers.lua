@@ -24,6 +24,7 @@ function helpers.direction_to_delta(value)
 	if value == "next" then return 1 end
 	if value == "prev" then return -1 end
 	local n = tonumber(value)
+	print("[split-monitor-workspaces] Parsed direction value '" .. tostring(value) .. "' as delta " .. tostring(n))
 	return n and math.floor(n) or 0
 end
 
@@ -49,10 +50,10 @@ end
 function helpers.get_primary_monitor()
 	local monitors = hl.get_monitors()
 	if #monitors == 0 then return nil end
-
-	if globals.cfg.default_monitor ~= "" then
+	local default_monitor = hl.get_config("cursor.default_monitor")
+	if default_monitor ~= "" then
 		for _, m in ipairs(monitors) do
-			if m.name == globals.cfg.default_monitor then return m end
+			if m.name == default_monitor then return m end
 		end
 	end
 

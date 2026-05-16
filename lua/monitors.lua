@@ -8,21 +8,6 @@ local helpers = require("helpers")
 local monitors = {}
 
 -- ============================================================
--- Workspace persistence rules
--- Must be called at config-load time (inside setup()), before any
--- workspaces are created, so the rules are in effect when workspaces
--- come into existence later via monitor.added events.
--- ============================================================
-
-function monitors.setup_persistence_rules()
-	if not globals.cfg.enable_persistent_workspaces then return end
-	local total = globals.cfg.max_monitors * globals.cfg.workspace_count
-	for i = 1, total do
-		hl.workspace_rule({ workspace = tostring(i), persistent = true })
-	end
-end
-
--- ============================================================
 -- Single-monitor mapping
 -- ============================================================
 
@@ -50,13 +35,21 @@ function monitors.map_monitor(monitor)
 		start_i, end_i, monitor.name))
 
 	globals.monitor_workspace_map[monitor.id] = {}
+	if globals.cfg.enable_persistent_workspaces then
+		for i = start_i, end_i do
+			hl.workspace_rule({ workspace = tostring(i), persistent = true, monitor = monitor.name })
+		end
+	end
 	for i = start_i, end_i do
 		local ws_name = tostring(i)
 		table.insert(globals.monitor_workspace_map[monitor.id], ws_name)
 
 		local ws = hl.get_workspace(ws_name)
+		print(string.format("[split-monitor-workspaces] Checking workspace %s for monitor %s: %s",
+			ws_name, monitor.name, ws and "exists" or "does not exist"))
 		if ws ~= nil then
 			-- workspace already exists on some other monitor; move it here
+			print("[split-monitor-workspaces] Moving existing workspace " .. ws_name .. " to monitor " .. monitor.name)
 			hl.dispatch(hl.dsp.workspace.move({ workspace = ws_name, monitor = monitor.name }))
 		elseif globals.cfg.enable_persistent_workspaces and i == start_i then
 			-- eagerly create and assign the first workspace so the monitor has
@@ -76,6 +69,17 @@ end
 -- ============================================================
 
 function monitors.unmap_monitor(monitor)
+	-- Clear persistence rules for this monitor's workspaces so stale rules
+	-- don't cause ensurePersistentWorkspacesPresent to move workspaces around.
+	if globals.cfg.enable_persistent_workspaces then
+		local ws_list = globals.monitor_workspace_map[monitor.id]
+		if ws_list then
+			for _, ws_name in ipairs(ws_list) do
+				hl.workspace_rule({ workspace = ws_name, persistent = false })
+			end
+		end
+	end
+
 	-- remove auto-generated entries so they are recalculated on the next remap
 	local prio = globals.monitor_priorities[monitor.name]
 	if prio and not prio.from_config then

@@ -1,6 +1,11 @@
 -- Example Hyprland Lua config using split-monitor-workspaces.
+--
+-- Hyprland sets package.path to only search relative to the config directory,
+-- so absolute-path require() calls do not work. Add the library directory to
+-- package.path first, then require by module name.
 
-local smw = require("/path/to/split-monitor-workspaces/lua/split-monitor-workspaces")
+package.path = package.path .. ";/path/to/split-monitor-workspaces/lua/?.lua"
+local smw = require("split-monitor-workspaces")
 
 smw.setup({
     -- Number of workspaces assigned to each monitor.
@@ -32,16 +37,16 @@ smw.setup({
     -- default_monitor = "DP-1",
 })
 
+-- get_amount_of_workspaces is an easy helper function that simply returns the workspace_count you passed to the setup function.
 for i = 1, smw.get_amount_of_workspaces() do
     local n = tostring(i)
-    hl.bind("SUPER, " .. n, smw.workspace(n))                    -- Switch to workspace N.
-    hl.bind("SUPER SHIFT, " .. n, smw.move_to_workspace(n))      -- Move the active window to workspace N and follow it.
-    hl.bind("SUPER ALT, " .. n, smw.move_to_workspace_silent(n)) -- Move the active window to workspace N silently (no focus change).
+    hl.bind("SUPER +" .. n, smw.workspace(n))                      -- Switch to workspace N.
+    hl.bind("SUPER +" .. n, smw.move_to_workspace_silent(n)) -- Move the active window to workspace N silently (no focus change).
 end
 
 -- Cycle workspaces on the current monitor.
-hl.bind("SUPER, mouse_down", smw.cycle_workspaces("next"))
-hl.bind("SUPER, mouse_up", smw.cycle_workspaces("prev"))
+hl.bind("SUPER + mouse_down", smw.cycle_workspaces("next"))
+hl.bind("SUPER + mouse_up", smw.cycle_workspaces("prev"))
 
 -- Move orphaned windows (not assigned to any mapped workspace) to the current workspace.
-hl.bind("SUPER, G", smw.grab_rogue_windows())
+hl.bind("SUPER + G", smw.grab_rogue_windows())

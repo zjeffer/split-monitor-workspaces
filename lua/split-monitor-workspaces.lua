@@ -70,10 +70,6 @@ function api.setup(user_config)
 		globals.monitor_max_ws_override[name] = { value = count, from_config = true }
 	end
 
-	-- Declare workspace persistence rules for the full expected ID range.
-	-- Must happen at config-load time (before workspaces are created).
-	monitors.setup_persistence_rules()
-
 	-- Register event handlers.
 	-- Handles are stored in globals.event_handles to prevent garbage collection.
 	globals.event_handles.monitor_added   = hl.on("monitor.added", function(monitor)

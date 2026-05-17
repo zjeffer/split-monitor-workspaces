@@ -5,3 +5,4 @@
 -- to suppress false-positive "undefined variable" warnings.
 
 read_globals = { "hl" }
+max_line_length = 160

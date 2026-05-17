@@ -1,9 +1,9 @@
--- split-monitor-workspaces.lua
--- Entry point and public API for the split-monitor-workspaces Lua library.
--- See example.lua in the repo root for a usage example.
+--- split-monitor-workspaces.lua
+--- Entry point and public API for the split-monitor-workspaces Lua library.
+--- See example.lua in the repo root for a usage example.
 
--- Ensure sibling modules are findable regardless of the Lua path.
--- This adds the directory that contains this file to package.path.
+--- Ensure sibling modules are findable regardless of the Lua path.
+--- This adds the directory that contains this file to package.path.
 local _dir = debug.getinfo(1, "S").source:match("@(.+[/\\])")
 if _dir then
 	package.path = _dir .. "?.lua;" .. package.path
@@ -16,62 +16,64 @@ local dispatchers = require("dispatchers")
 
 local api         = {}
 
--- ==========================================================
--- Public API: dispatcher closures compatible with hl.bind()
--- ==========================================================
+--- ==========================================================
+--- Public API: dispatcher closures compatible with hl.bind()
+--- ==========================================================
 
--- Switch to workspace N (1-indexed within the current monitor's range).
--- Also supports "+N", "-N", "empty".
+--- Switch to workspace N (1-indexed within the current monitor's range).
+---- @param workspace_str string The workspace to switch to, specified as a string. Also supports "+N", "-N", and "empty".
 function api.workspace(workspace_str)
 	return function() dispatchers.do_workspace(workspace_str) end
 end
 
--- Cycle workspaces on the current monitor.
--- value: "next", "prev", "+N", "-N"
--- Wrapping is controlled by globals.cfg.enable_wrapping.
+---- Cycle workspaces on the current monitor. Wrapping is controlled by globals.cfg.enable_wrapping.
+---- @param value string: "next", "prev", "+N", "-N"
 function api.cycle_workspaces(value)
 	return function() dispatchers.do_cycle_workspaces(value, not globals.cfg.enable_wrapping) end
 end
 
--- Move the active window to workspace N and follow it.
+---- Move the active window to workspace N and follow it.
+---- @param workspace_str string The workspace to move to, specified as a string. Also supports "+N", "-N", and "empty". 
 function api.move_to_workspace(workspace_str)
 	return function() dispatchers.do_move_to_workspace(workspace_str, false) end
 end
 
--- Move the active window to workspace N silently (no focus change).
+---- Move the active window to workspace N silently (no focus change).
+---- @param workspace_str string The workspace to move to, specified as a string. Also supports "+N", "-N", and "empty".
 function api.move_to_workspace_silent(workspace_str)
 	return function() dispatchers.do_move_to_workspace(workspace_str, true) end
 end
 
--- Move all windows not in any mapped workspace to the current workspace.
+---- Move all windows not in any mapped workspace to the current workspace.
+---- Useful for "grabbing" windows that would otherwise be "lost" on an unmapped monitor or after a config change.
 function api.grab_rogue_windows()
 	return function() dispatchers.do_grab_rogue_windows() end
 end
 
--- ============================================================
--- Setup
--- ============================================================
+--- ============================================================
+--- Setup
+--- ============================================================
 
 function api.setup(user_config)
-	-- Merge user config over defaults.
+	--- Merge user config over defaults.
 	if user_config then
 		for k, v in pairs(user_config) do
 			globals.cfg[k] = v
 		end
 	end
 
-	-- Load monitor_priority list into the priorities map.
+	--- Load monitor_priority list into the priorities map.
 	for i, name in ipairs(globals.cfg.monitor_priority) do
 		globals.monitor_priorities[name] = { value = i - 1, from_config = true }
 	end
 
-	-- Load per-monitor max_workspaces overrides.
+	--- Load per-monitor max_workspaces overrides.
 	for name, count in pairs(globals.cfg.max_workspaces) do
 		globals.monitor_max_ws_override[name] = { value = count, from_config = true }
 	end
 
-	-- Register event handlers.
-	-- Handles are stored in globals.event_handles to prevent garbage collection.
+	--- Register event handlers.
+	--- Handles are stored in globals.event_handles to prevent garbage collection.
 	globals.event_handles.monitor_added   = hl.on("monitor.added", function(monitor)
 		monitors.map_monitor(monitor)
 	end)
@@ -79,7 +81,7 @@ function api.setup(user_config)
 		monitors.unmap_monitor(monitor)
 	end)
 	globals.event_handles.config_reloaded = hl.on("config.reloaded", function()
-		-- Clear auto-assigned priorities and overrides before remapping.
+		--- Clear auto-assigned priorities and overrides before remapping.
 		for name, p in pairs(globals.monitor_priorities) do
 			if not p.from_config then globals.monitor_priorities[name] = nil end
 		end

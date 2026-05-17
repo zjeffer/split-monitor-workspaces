@@ -1,4 +1,4 @@
--- .luacheckrc — luacheck configuration for split-monitor-workspaces
+-- .luacheckrc - luacheck configuration for split-monitor-workspaces
 --
 -- `hl` is the Hyprland Lua API global, injected at runtime by Hyprland.
 -- It is not defined in any of our source files, so we declare it here

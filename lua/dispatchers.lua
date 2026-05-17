@@ -1,54 +1,67 @@
--- dispatchers.lua
--- Imperative implementations of each split-monitor-workspaces action.
--- These are called at runtime (from keybind callbacks and event handlers).
+--- dispatchers.lua
+--- Imperative implementations of each split-monitor-workspaces action.
+--- These are called at runtime (from keybind callbacks and event handlers).
 --
--- Each function in this module has a corresponding public closure factory
--- in split-monitor-workspaces.lua that wraps it for use with hl.bind().
+--- Each function in this module has a corresponding public closure factory
+--- in split-monitor-workspaces.lua that wraps it for use with hl.bind().
 
 local globals = require("globals")
 local helpers = require("helpers")
 
 local dispatchers = {}
 
--- ============================================================
--- split-workspace
--- ============================================================
+--- ============================================================
+--- split-workspace
+--- ============================================================
 
 function dispatchers.do_workspace(workspace_str)
 	if globals.cfg.link_monitors then
-		-- Gnome-style: switch all monitors to their corresponding workspace.
-		local current = helpers.get_current_monitor()
+		--- Gnome-style: switch all monitors to their corresponding workspace.
+		local current_monitor = helpers.get_current_monitor()
 		for _, monitor in ipairs(hl.get_monitors()) do
-			local resolved = helpers.get_workspace_from_monitor(monitor, workspace_str)
-			-- create the workspace if it does not yet exist
-			if hl.get_workspace(resolved) == nil then
-				hl.dispatch(hl.dsp.focus({ workspace = resolved }))
+			local target_workspace = helpers.get_workspace_from_monitor(monitor, workspace_str)
+			--- create the workspace if it does not yet exist
+			if hl.get_workspace(target_workspace) == nil then
+				hl.dispatch(hl.dsp.focus({ workspace = target_workspace }))
 			end
-			hl.dispatch(hl.dsp.workspace.move({ workspace = resolved, monitor = monitor.name }))
-			if current and monitor.id == current.id then
-				hl.dispatch(hl.dsp.focus({ workspace = resolved }))
-			end
+			--- move it to the correct monitor if it's not already there
+			hl.dispatch(hl.dsp.workspace.move({ workspace = target_workspace, monitor = monitor.name, follow = true }))
+			--- ensure the workspace is now focused for this monitor
+			hl.dispatch(hl.dsp.focus({ workspace = target_workspace }))
 		end
+
+		--- now focus the original monitor's workspace again to ensure focus doesn't jump monitors
+		--- TODO: upstream Hyprland should support changing workspaces on a monitor without focusing it using lua (like the C++ plugin did)
+		hl.dispatch(hl.dsp.focus({ workspace = helpers.get_workspace_from_monitor(current_monitor, workspace_str) }))
 	else
 		local monitor = helpers.get_current_monitor()
-		if not monitor then return end
+		if not monitor then
+			error("[split-monitor-workspaces] No current monitor? Cannot switch workspace.")
+			return
+		end
 		local resolved = helpers.get_workspace_from_monitor(monitor, workspace_str)
 		hl.dispatch(hl.dsp.focus({ workspace = resolved }))
 	end
 end
 
--- ============================================================
--- split-cycleworkspaces
--- ============================================================
+--- ============================================================
+--- split-cycleworkspaces
+--- ============================================================
 
+---- Cycle to the next/previous workspace on the current monitor.
+---@param value string "next", "prev", "+N", or "-N"
+---@param no_wrap boolean if true, do not wrap around when cycling past the first or last workspace
 function dispatchers.do_cycle_workspaces(value, no_wrap)
+	---@type integer the delta value to apply to the current workspace index
 	local delta = helpers.direction_to_delta(value)
 	if delta == 0 then
-		print("[split-monitor-workspaces] Invalid cycle value: " .. tostring(value))
+		print("[split-monitor-workspaces] Invalid cycle value: " .. value)
 		return
 	end
 
+	---@type HL.Monitor[]
 	local monitors_to_cycle
+
 	if globals.cfg.link_monitors then
 		monitors_to_cycle = hl.get_monitors()
 	else
@@ -92,9 +105,9 @@ function dispatchers.do_cycle_workspaces(value, no_wrap)
 	end
 end
 
--- ============================================================
--- split-movetoworkspace / split-movetoworkspacesilent
--- ============================================================
+--- ============================================================
+--- split-movetoworkspace / split-movetoworkspacesilent
+--- ============================================================
 
 function dispatchers.do_move_to_workspace(workspace_str, silent)
 	local monitor = helpers.get_current_monitor()
@@ -120,9 +133,9 @@ function dispatchers.do_move_to_workspace(workspace_str, silent)
 	end
 end
 
--- ============================================================
--- split-grabroguewindows
--- ============================================================
+--- ============================================================
+--- split-grabroguewindows
+--- ============================================================
 
 function dispatchers.do_grab_rogue_windows()
 	local current_monitor = helpers.get_current_monitor()
@@ -130,7 +143,7 @@ function dispatchers.do_grab_rogue_windows()
 	local current_ws = current_monitor.active_workspace
 	if not current_ws then return end
 
-	-- build a set of all workspace names that belong to any mapped monitor
+	--- build a set of all workspace names that belong to any mapped monitor
 	local mapped = {}
 	for _, ws_list in pairs(globals.monitor_workspace_map) do
 		for _, name in ipairs(ws_list) do
@@ -148,7 +161,7 @@ function dispatchers.do_grab_rogue_windows()
 			print(string.format(
 				"[split-monitor-workspaces] Moving rogue window '%s' from workspace %s to %s",
 				window.title, window.workspace.name, current_ws.name))
-			-- use the address selector to target a specific non-active window
+			--- use the address selector to target a specific non-active window
 			hl.dispatch(hl.dsp.window.move({ workspace = current_ws.name, window = window, follow = false }))
 		end
 

@@ -129,7 +129,7 @@ If you set `enable_wrapping = false` in the plugin config, it will not wrap arou
 | Move window to next/previous monitor (silent) | `next/prev/+x/-x` | `split-changemonitorsilent` | `smw.change_monitor_silent` |
 | Move rogue windows to current monitor |  | `split-grabroguewindows` | `smw.grab_rogue_windows` |
 
-> **Deprecated:** `split-cycleworkspacesnowrap` — set `enable_wrapping = false` in the plugin config instead.
+> **Deprecated:** `split-cycleworkspacesnowrap` - set `enable_wrapping = false` in the plugin config instead.
 
 ## Configuration
 

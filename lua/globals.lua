@@ -10,14 +10,14 @@
 ---@field from_config boolean
 
 ---@class SMW.Config
----@field workspace_count integer
----@field keep_focused boolean
----@field enable_notifications boolean
----@field enable_persistent_workspaces boolean
----@field enable_wrapping boolean
----@field link_monitors boolean
----@field monitor_priority string[]
----@field max_workspaces table<string, integer>
+---@field workspace_count integer?
+---@field keep_focused boolean?
+---@field enable_notifications boolean?
+---@field enable_persistent_workspaces boolean?
+---@field enable_wrapping boolean?
+---@field link_monitors boolean?
+---@field monitor_priority string[]?
+---@field max_workspaces table<string, integer>?
 
 local globals = {}
 
@@ -72,10 +72,5 @@ globals.monitor_priorities = {}
 --- Per-monitor workspace count overrides loaded from cfg.max_workspaces.
 ---@type table<string, SMW.PriorityEntry>
 globals.monitor_max_ws_override = {}
-
---- Event subscription handles.
---- Stored here to prevent Lua's garbage collector from destroying them.
----@type table<string, HL.EventSubscription>
-globals.event_handles = {}
 
 return globals

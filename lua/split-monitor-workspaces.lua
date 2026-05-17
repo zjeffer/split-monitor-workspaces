@@ -73,14 +73,13 @@ function api.setup(user_config)
 	end
 
 	--- Register event handlers.
-	--- Handles are stored in globals.event_handles to prevent garbage collection.
-	globals.event_handles.monitor_added   = hl.on("monitor.added", function(monitor)
+	hl.on("monitor.added", function(monitor)
 		monitors.map_monitor(monitor)
 	end)
-	globals.event_handles.monitor_removed = hl.on("monitor.removed", function(monitor)
+	hl.on("monitor.removed", function(monitor)
 		monitors.unmap_monitor(monitor)
 	end)
-	globals.event_handles.config_reloaded = hl.on("config.reloaded", function()
+	hl.on("config.reloaded", function()
 		--- Clear auto-assigned priorities and overrides before remapping.
 		for name, p in pairs(globals.monitor_priorities) do
 			if not p.from_config then globals.monitor_priorities[name] = nil end

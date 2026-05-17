@@ -32,7 +32,7 @@ jobs:
         echo "GIT_COMMIT_HASH=$hash" >> $GITHUB_ENV
 
     - name: Checkout Hyprland repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: hyprwm/Hyprland
         ref: ${{ env.GIT_COMMIT_HASH }}
@@ -45,7 +45,7 @@ jobs:
         make all && make installheaders
 
     - name: Checkout current repository and checkout pinned commit
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0 # to allow checkout out a specific commit later
         path: split-monitor-workspaces

@@ -23,7 +23,7 @@ jobs:
         sudo -u user sh -c "paru -Syu --noconfirm meson aquamarine-git hyprwire-git hyprland-git hyprutils-git hyprwayland-scanner-git"
 
     - name: Checkout current repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Build current repository
       run: |

@@ -5,12 +5,27 @@
 --- Because require() caches its result, every module receives the same
 --- table references, so mutations are visible everywhere.
 
+---@class SMW.PriorityEntry
+---@field value integer
+---@field from_config boolean
+
+---@class SMW.Config
+---@field workspace_count integer
+---@field keep_focused boolean
+---@field enable_notifications boolean
+---@field enable_persistent_workspaces boolean
+---@field enable_wrapping boolean
+---@field link_monitors boolean
+---@field monitor_priority string[]
+---@field max_workspaces table<string, integer>
+
 local globals = {}
 
 --- ============================================================
 --- Configuration defaults
 --- ============================================================
 
+---@type SMW.Config
 globals.cfg = {
 	--- Number of workspaces to assign to each monitor.
 	workspace_count = 10,
@@ -45,18 +60,22 @@ globals.cfg = {
 --- ============================================================
 
 --- monitor.id (integer) -> list of workspace name strings (e.g. {"11","12",...,"20"})
+---@type table<integer, string[]>
 globals.monitor_workspace_map = {}
 
 --- monitor.name (string) -> { value = integer, from_config = boolean }
 --- Tracks the priority of each monitor (lower value = higher priority = lower workspace IDs).
+---@type table<string, SMW.PriorityEntry>
 globals.monitor_priorities = {}
 
 --- monitor.name (string) -> { value = integer, from_config = boolean }
 --- Per-monitor workspace count overrides loaded from cfg.max_workspaces.
+---@type table<string, SMW.PriorityEntry>
 globals.monitor_max_ws_override = {}
 
 --- Event subscription handles.
 --- Stored here to prevent Lua's garbage collector from destroying them.
+---@type table<string, HL.EventSubscription>
 globals.event_handles = {}
 
 return globals

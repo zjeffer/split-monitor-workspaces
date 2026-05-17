@@ -2,12 +2,6 @@
 --- Entry point and public API for the split-monitor-workspaces Lua library.
 --- See example.lua in the repo root for a usage example.
 
---- Ensure sibling modules are findable regardless of the Lua path.
---- This adds the directory that contains this file to package.path.
-local _dir = debug.getinfo(1, "S").source:match("@(.+[/\\])")
-if _dir then
-	package.path = _dir .. "?.lua;" .. package.path
-end
 
 local globals     = require("globals")
 local helpers     = require("helpers")
@@ -21,31 +15,36 @@ local api         = {}
 --- ==========================================================
 
 --- Switch to workspace N (1-indexed within the current monitor's range).
----- @param workspace_str string The workspace to switch to, specified as a string. Also supports "+N", "-N", and "empty".
+---@param workspace_str string The workspace to switch to, specified as a string. Also supports "+N", "-N", and "empty".
+---@return fun(): nil
 function api.workspace(workspace_str)
 	return function() dispatchers.do_workspace(workspace_str) end
 end
 
----- Cycle workspaces on the current monitor. Wrapping is controlled by globals.cfg.enable_wrapping.
----- @param value string: "next", "prev", "+N", "-N"
+--- Cycle workspaces on the current monitor. Wrapping is controlled by globals.cfg.enable_wrapping.
+---@param value string "next", "prev", "+N", "-N"
+---@return fun(): nil
 function api.cycle_workspaces(value)
 	return function() dispatchers.do_cycle_workspaces(value, not globals.cfg.enable_wrapping) end
 end
 
----- Move the active window to workspace N and follow it.
----- @param workspace_str string The workspace to move to, specified as a string. Also supports "+N", "-N", and "empty". 
+--- Move the active window to workspace N and follow it.
+---@param workspace_str string The workspace to move to, specified as a string. Also supports "+N", "-N", and "empty".
+---@return fun(): nil
 function api.move_to_workspace(workspace_str)
 	return function() dispatchers.do_move_to_workspace(workspace_str, false) end
 end
 
----- Move the active window to workspace N silently (no focus change).
----- @param workspace_str string The workspace to move to, specified as a string. Also supports "+N", "-N", and "empty".
+--- Move the active window to workspace N silently (no focus change).
+---@param workspace_str string The workspace to move to, specified as a string. Also supports "+N", "-N", and "empty".
+---@return fun(): nil
 function api.move_to_workspace_silent(workspace_str)
 	return function() dispatchers.do_move_to_workspace(workspace_str, true) end
 end
 
----- Move all windows not in any mapped workspace to the current workspace.
----- Useful for "grabbing" windows that would otherwise be "lost" on an unmapped monitor or after a config change.
+--- Move all windows not in any mapped workspace to the current workspace.
+--- Useful for "grabbing" windows that would otherwise be "lost" on an unmapped monitor or after a config change.
+---@return fun(): nil
 function api.grab_rogue_windows()
 	return function() dispatchers.do_grab_rogue_windows() end
 end
@@ -54,6 +53,7 @@ end
 --- Setup
 --- ============================================================
 
+---@param user_config SMW.Config?
 function api.setup(user_config)
 	--- Merge user config over defaults.
 	if user_config then
@@ -95,6 +95,9 @@ function api.setup(user_config)
 	print("[split-monitor-workspaces] Setup complete. Workspaces will be mapped after config.reloaded.")
 end
 
+--- Get the configured number of workspaces each monitor should have.
+--- Does not take into account per-monitor overrides from cfg.max_workspaces.
+---@return integer
 function api.get_amount_of_workspaces()
 	return globals.cfg.workspace_count
 end

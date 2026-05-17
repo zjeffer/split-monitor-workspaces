@@ -14,11 +14,14 @@ local dispatchers = {}
 --- split-workspace
 --- ============================================================
 
+---@param workspace_str string
 function dispatchers.do_workspace(workspace_str)
 	if globals.cfg.link_monitors then
 		--- Gnome-style: switch all monitors to their corresponding workspace.
+		---@type HL.Monitor|nil
 		local current_monitor = helpers.get_current_monitor()
 		for _, monitor in ipairs(hl.get_monitors()) do
+			---@type string
 			local target_workspace = helpers.get_workspace_from_monitor(monitor, workspace_str)
 			--- create the workspace if it does not yet exist
 			if hl.get_workspace(target_workspace) == nil then
@@ -34,11 +37,13 @@ function dispatchers.do_workspace(workspace_str)
 		--- TODO: upstream Hyprland should support changing workspaces on a monitor without focusing it using lua (like the C++ plugin did)
 		hl.dispatch(hl.dsp.focus({ workspace = helpers.get_workspace_from_monitor(current_monitor, workspace_str) }))
 	else
+		---@type HL.Monitor|nil
 		local monitor = helpers.get_current_monitor()
 		if not monitor then
 			error("[split-monitor-workspaces] No current monitor? Cannot switch workspace.")
 			return
 		end
+		---@type string
 		local resolved = helpers.get_workspace_from_monitor(monitor, workspace_str)
 		hl.dispatch(hl.dsp.focus({ workspace = resolved }))
 	end
@@ -70,10 +75,13 @@ function dispatchers.do_cycle_workspaces(value, no_wrap)
 	end
 
 	for _, monitor in ipairs(monitors_to_cycle) do
+		---@type string[]|nil
 		local ws_list = globals.monitor_workspace_map[monitor.id]
 		if not ws_list then goto continue end
 
+		---@type string|nil
 		local active_name = monitor.active_workspace and monitor.active_workspace.name
+		---@type integer|nil
 		local idx = nil
 		for i, name in ipairs(ws_list) do
 			if name == active_name then
@@ -91,6 +99,7 @@ function dispatchers.do_cycle_workspaces(value, no_wrap)
 			idx = 1
 		end
 
+		---@type string
 		local target = ws_list[idx]
 		if globals.cfg.link_monitors then
 			hl.dispatch(hl.dsp.workspace.move({ workspace = target, monitor = monitor.name }))
@@ -109,9 +118,13 @@ end
 --- split-movetoworkspace / split-movetoworkspacesilent
 --- ============================================================
 
+---@param workspace_str string
+---@param silent boolean
 function dispatchers.do_move_to_workspace(workspace_str, silent)
+	---@type HL.Monitor|nil
 	local monitor = helpers.get_current_monitor()
 	if not monitor then return end
+	---@type string
 	local resolved = helpers.get_workspace_from_monitor(monitor, workspace_str)
 
 	if hl.plugin.hy3 then
@@ -138,12 +151,15 @@ end
 --- ============================================================
 
 function dispatchers.do_grab_rogue_windows()
+	---@type HL.Monitor|nil
 	local current_monitor = helpers.get_current_monitor()
 	if not current_monitor then return end
+	---@type HL.Workspace|nil
 	local current_ws = current_monitor.active_workspace
 	if not current_ws then return end
 
 	--- build a set of all workspace names that belong to any mapped monitor
+	---@type table<string, boolean>
 	local mapped = {}
 	for _, ws_list in pairs(globals.monitor_workspace_map) do
 		for _, name in ipairs(ws_list) do
@@ -151,6 +167,7 @@ function dispatchers.do_grab_rogue_windows()
 		end
 	end
 
+	---@type HL.Window[]
 	local windows = hl.get_windows()
 	for _, window in ipairs(windows) do
 		if not window.mapped then goto continue end

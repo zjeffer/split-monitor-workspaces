@@ -8,6 +8,8 @@ local helpers = {}
 --- Notification helper
 --- ============================================================
 
+--- Show a notification with the given message, prefixed by the plugin name.
+--- Only shows notifications if cfg.enable_notifications is true.
 ---@param msg string
 function helpers.notify(msg)
 	if globals.cfg.enable_notifications then
@@ -59,7 +61,7 @@ function helpers.get_primary_monitor()
 	---@type HL.Monitor[]
 	local monitors = hl.get_monitors()
 	if #monitors == 0 then
-		print("[split-monitor-workspaces] No monitors detected")
+		error("[split-monitor-workspaces] No monitors detected?")
 		return nil
 	end
 	---@type string

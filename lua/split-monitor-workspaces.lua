@@ -54,6 +54,8 @@ end
 
 ---@param user_config SMW.Config?
 function api.setup(user_config)
+	print("[split-monitor-workspaces] Initializing split-monitor-workspaces...")
+
 	--- Merge user config over defaults.
 	if user_config then
 		for k, v in pairs(user_config) do
@@ -87,10 +89,8 @@ function api.setup(user_config)
 			if not p.from_config then globals.monitor_max_ws_override[name] = nil end
 		end
 		monitors.remap_all_monitors()
+		helpers.notify("Initialized successfully!")
 	end)
-
-	helpers.notify("Initialized successfully!")
-	print("[split-monitor-workspaces] Setup complete. Workspaces will be mapped after config.reloaded.")
 end
 
 --- Get the configured number of workspaces each monitor should have.

@@ -67,7 +67,6 @@ function monitors.map_monitor(monitor)
 		local ws = hl.get_workspace(ws_name)
 		if ws ~= nil then
 			--- workspace already exists on some other monitor; move it here
-			print("[split-monitor-workspaces] Moving existing workspace " .. ws_name .. " to monitor " .. monitor.name)
 			hl.dispatch(hl.dsp.workspace.move({ workspace = ws_name, monitor = monitor.name }))
 		elseif i == start_i then
 			--- workspace doesn't exist, let's create it and make sure it's on the correct monitor.

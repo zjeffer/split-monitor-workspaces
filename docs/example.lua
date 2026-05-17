@@ -1,14 +1,15 @@
 --- Example Hyprland Lua config using split-monitor-workspaces.
----
+--- This file serves as an example to show what's possible, not necessarily a recommended config.
+
 --- Hyprland sets package.path to only search relative to the config directory,
 --- so absolute-path require() calls do not work. Add the library directory to
 --- package.path first, then require by module name.
-
---- This file serves as an example to show what's possible, not necessarily a recommended config.
-
 package.path = package.path .. ";/path/to/split-monitor-workspaces/lua/?.lua"
+
+--- Import the library.
 local smw = require("split-monitor-workspaces")
 
+--- Required setup call with your custom configuration.
 smw.setup({
     --- Number of workspaces assigned to each monitor.
     workspace_count = 5,

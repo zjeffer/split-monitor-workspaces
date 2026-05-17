@@ -59,10 +59,11 @@ function dispatchers.do_cycle_workspaces(value, no_wrap)
 	---@type integer the delta value to apply to the current workspace index
 	local delta = helpers.direction_to_delta(value)
 	if delta == 0 then
-		print("[split-monitor-workspaces] Invalid cycle value: " .. value)
+		error("[split-monitor-workspaces] Invalid value for cycle_workspaces: " .. tostring(value))
 		return
 	end
 
+	-- Depending on whether link_monitors is enabled, either cycle all monitors or just the current one.
 	---@type HL.Monitor[]
 	local monitors_to_cycle
 
@@ -73,11 +74,14 @@ function dispatchers.do_cycle_workspaces(value, no_wrap)
 		monitors_to_cycle = m and { m } or {}
 	end
 
+	-- For each monitor (or just the current one), find the currently active workspace in its assigned workspace list,
+	-- then switch to the workspace at index + delta, wrapping if necessary.
 	for _, monitor in ipairs(monitors_to_cycle) do
 		---@type string[]|nil
 		local ws_list = globals.monitor_workspace_map[monitor.id]
 		if not ws_list then goto continue end
 
+		-- Figure out which workspace is currently active on this monitor, and its index within the monitor's workspace list.
 		---@type string|nil
 		local active_name = monitor.active_workspace and monitor.active_workspace.name
 		---@type integer|nil
@@ -89,6 +93,7 @@ function dispatchers.do_cycle_workspaces(value, no_wrap)
 		end
 		if not idx then goto continue end
 
+		-- Apply the delta to get the target workspace index, wrapping if necessary and if no_wrap is not set.
 		idx = idx + delta
 		if idx < 1 then
 			if no_wrap then goto continue end
@@ -98,6 +103,7 @@ function dispatchers.do_cycle_workspaces(value, no_wrap)
 			idx = 1
 		end
 
+		-- Focus the target workspace. If link_monitors is enabled, also move it to the correct monitor if it's not already there.
 		---@type string
 		local target = ws_list[idx]
 		if globals.cfg.link_monitors then
@@ -117,22 +123,29 @@ end
 --- split-movetoworkspace / split-movetoworkspacesilent
 --- ============================================================
 
+--- Move the active window to the specified workspace, optionally without changing focus.
 ---@param workspace_str string
 ---@param silent boolean
 function dispatchers.do_move_to_workspace(workspace_str, silent)
 	---@type HL.Monitor|nil
 	local monitor = helpers.get_current_monitor()
-	if not monitor then return end
+	if not monitor then
+		error("[split-monitor-workspaces] No current monitor? Cannot move window to workspace.")
+		return
+	end
+
 	---@type string
 	local resolved = helpers.get_workspace_from_monitor(monitor, workspace_str)
 
 	if hl.plugin.hy3 then
+		-- Explicit hy3 support: use the hy3-specific dispatchers instead of Hyprland's.
 		if silent then
 			hl.dispatch(hl.plugin.hy3.move_to_workspace(resolved))
 		else
 			hl.dispatch(hl.plugin.hy3.move_to_workspace(resolved, { follow = true }))
 		end
 	else
+		-- No hy3 detected: simply use Hyprland's dispatchers.
 		if silent then
 			hl.dispatch(hl.dsp.window.move({ workspace = resolved, follow = false }))
 		else
@@ -140,6 +153,8 @@ function dispatchers.do_move_to_workspace(workspace_str, silent)
 		end
 	end
 
+	-- If link_monitors is enabled and we're following the window, call do_workspace to ensure *all* monitors switch to the correct workspaces,
+	-- not just the one the window is being moved to.
 	if globals.cfg.link_monitors and not silent then
 		dispatchers.do_workspace(workspace_str)
 	end

@@ -5,9 +5,6 @@
 --- Because require() caches its result, every module receives the same
 --- table references, so mutations are visible everywhere.
 
----@class SMW.PriorityEntry
----@field value integer
----@field from_config boolean
 
 ---@class SMW.Config
 ---@field workspace_count integer?
@@ -18,6 +15,11 @@
 ---@field link_monitors boolean?
 ---@field monitor_priority string[]?
 ---@field max_workspaces table<string, integer>?
+
+
+---@class SMW.PriorityEntry
+---@field value integer
+---@field from_config boolean
 
 local globals = {}
 

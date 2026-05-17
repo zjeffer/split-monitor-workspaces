@@ -42,7 +42,7 @@ end
 function helpers.get_monitor_max_ws(monitor_name)
 	---@type SMW.PriorityEntry|nil
 	local ov = globals.monitor_max_ws_override[monitor_name]
-	return ov and ov.value or globals.cfg.workspace_count
+	return ov and ov.value or globals.cfg.workspace_count or 10
 end
 
 --- Return the currently focused monitor, falling back to the monitor under the cursor.

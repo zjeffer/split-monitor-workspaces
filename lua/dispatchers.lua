@@ -16,10 +16,15 @@ local dispatchers = {}
 
 ---@param workspace_str string
 function dispatchers.do_workspace(workspace_str)
+	---@type HL.Monitor|nil
+	local current_monitor = helpers.get_current_monitor()
+	if not current_monitor then
+		error("[split-monitor-workspaces] No current monitor? Cannot switch workspace.")
+		return
+	end
+
 	if globals.cfg.link_monitors then
 		--- Gnome-style: switch all monitors to their corresponding workspace.
-		---@type HL.Monitor|nil
-		local current_monitor = helpers.get_current_monitor()
 		for _, monitor in ipairs(hl.get_monitors()) do
 			---@type string
 			local target_workspace = helpers.get_workspace_from_monitor(monitor, workspace_str)
@@ -37,14 +42,8 @@ function dispatchers.do_workspace(workspace_str)
 		--- TODO: upstream Hyprland should support changing workspaces on a monitor without focusing it using lua (like the C++ plugin did)
 		hl.dispatch(hl.dsp.focus({ workspace = helpers.get_workspace_from_monitor(current_monitor, workspace_str) }))
 	else
-		---@type HL.Monitor|nil
-		local monitor = helpers.get_current_monitor()
-		if not monitor then
-			error("[split-monitor-workspaces] No current monitor? Cannot switch workspace.")
-			return
-		end
 		---@type string
-		local resolved = helpers.get_workspace_from_monitor(monitor, workspace_str)
+		local resolved = helpers.get_workspace_from_monitor(current_monitor, workspace_str)
 		hl.dispatch(hl.dsp.focus({ workspace = resolved }))
 	end
 end

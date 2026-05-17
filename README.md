@@ -1,18 +1,20 @@
 # split-monitor-workspaces
 
+[![Luacheck](https://github.com/zjeffer/split-monitor-workspaces/actions/workflows/luacheck.yml/badge.svg?branch=main)](https://github.com/zjeffer/split-monitor-workspaces/actions/workflows/luacheck.yml)
+
 A lua package for Hyprland to provide `awesome`/`dwm`-like behavior with workspaces: split them between monitors and provide independent numbering.
 
-The package features an easy to use API to manage workspaces on the currently focused monitor, without having to set up complicated rules yourself. It also provides functionality to create persistent workspaces on each monitor at Hyprland startup, as well as dynamically when new monitors are connected.
+The package features an easy-to-use API to focus or move windows to the `n`th workspace on the active monitor (with for example `SUPER + <N>`, `N` being a number on your keyboard) without having to set up complicated rules yourself. It also provides functionality to create persistent workspaces on each monitor at Hyprland startup, as well as dynamically when new monitors are connected.
 
 It's explicitly compatible with [the hy3 plugin](https://github.com/outfoxxed/hy3): we automatically detect if hy3 is installed, and if it is we'll use hy3's dispatchers instead of Hyprland's.
 
-# Requirements
+## Requirements
 
 - Hyprland >= 0.55.0
 
 If you're using an older version of Hyprland, or have not yet switched to the new Lua config, you can use the [cpp plugin](./docs/cpp-plugin.md) instead, which provides the same functionality. This will be deprecated soon in favour of the lua package.
 
-# Installation
+## Installation
 
 Simply clone the repository to a location of your choice, then add the following lines to your Hyprland config:
 
@@ -21,7 +23,7 @@ package.path = package.path .. ";/path/to/split-monitor-workspaces/lua/?.lua"
 local smw = require("split-monitor-workspaces")
 ```
 
-# Usage
+## Usage
 
 Now that the `smw` package is imported, you can call the `setup()` function with your desired configuration.
 
@@ -49,7 +51,7 @@ end
 
 An example showing the full API can be found in [docs/example.lua](./docs/example.lua).
 
-## Waybar integration
+### Waybar integration
 
 This plugin supports [waybar's](https://github.com/Alexays/Waybar) `hyprland/workspaces` module:
 
@@ -68,6 +70,18 @@ This plugin supports [waybar's](https://github.com/Alexays/Waybar) `hyprland/wor
     "all-outputs": false // recommended
   },
 ```
+
+## Updating
+
+To update, simply pull the latest changes in the repository, or checkout a specific git tag if you want to update a version matching a Hyprland release.
+
+```bash
+git fetch && git checkout main && git pull
+# or, for a specific tag:
+git fetch && git checkout v0.55.0
+```
+
+It is recommended to do this every time you update Hyprland, to ensure compatibility.
 
 # Special thanks
 

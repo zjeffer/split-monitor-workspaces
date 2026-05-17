@@ -33,9 +33,6 @@ smw.setup({
 
     --- Switch all monitors simultaneously when changing workspaces (Gnome-style).
     --- link_monitors = false,
-
-    --- Monitor to focus on startup/reload (same as cursor:default_monitor).
-    --- default_monitor = "DP-1",
 })
 
 --- get_amount_of_workspaces is an easy helper function that simply returns the workspace_count you passed to the setup function.

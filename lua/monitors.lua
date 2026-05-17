@@ -44,11 +44,11 @@ function monitors.map_monitor(monitor)
 	--- if the monitor is already showing a workspace in its assigned range we
 	--- leave it alone; otherwise we initialise it to the first workspace.
 	---@type HL.Workspace|nil
-	local prev_ws     = hl.get_active_workspace(monitor)
+	local prev_ws                             = hl.get_active_workspace(monitor)
 	---@type number|nil
-	local prev_ws_num = prev_ws and tonumber(prev_ws.name)
+	local prev_ws_num                         = prev_ws and tonumber(prev_ws.name)
 	---@type boolean
-	local in_range    = prev_ws_num ~= nil
+	local in_range                            = prev_ws_num ~= nil
 		and prev_ws_num >= start_i
 		and prev_ws_num <= end_i
 
@@ -69,9 +69,9 @@ function monitors.map_monitor(monitor)
 			--- workspace already exists on some other monitor; move it here
 			print("[split-monitor-workspaces] Moving existing workspace " .. ws_name .. " to monitor " .. monitor.name)
 			hl.dispatch(hl.dsp.workspace.move({ workspace = ws_name, monitor = monitor.name }))
-		elseif globals.cfg.enable_persistent_workspaces and i == start_i then
-			--- eagerly create and assign the first workspace so the monitor has
-			--- something to display; the rest are created on demand
+		elseif i == start_i then
+			--- workspace doesn't exist, let's create it and make sure it's on the correct monitor.
+			--- Without this, only the last mapped monitor ends up with the correct workspace on startup (see issue #121).
 			hl.dispatch(hl.dsp.focus({ workspace = ws_name }))
 			hl.dispatch(hl.dsp.workspace.move({ workspace = ws_name, monitor = monitor.name }))
 		end

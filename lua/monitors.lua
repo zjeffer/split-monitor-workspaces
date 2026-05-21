@@ -140,22 +140,81 @@ end
 
 function monitors.remap_all_monitors()
 	print("[split-monitor-workspaces] Remapping all monitors")
+
+	--- When keep_focused is enabled, snapshot what every monitor is currently
+	--- showing *before* any workspace changes happen. We restore the correct
+	--- state in a second pass after all remapping is done.
+	---@type HL.Monitor[]
+	local monitor_list = hl.get_monitors()
+
+	---@class SMW.SavedMonitorState
+	---@field monitor HL.Monitor
+	---@field ws_name string
+	---@field is_focused boolean
+
+	---@type table<integer, SMW.SavedMonitorState>
+	local saved = {}
+	---@type integer|nil
+	local focused_id = nil
+	if globals.cfg.keep_focused then
+		---@type HL.Monitor|nil
+		local active = hl.get_active_monitor()
+		if active then focused_id = active.id end
+		for _, m in ipairs(monitor_list) do
+			---@type HL.Workspace|nil
+			local ws = hl.get_active_workspace(m)
+			if ws then
+				saved[m.id] = {
+					monitor    = m,
+					ws_name    = ws.name,
+					is_focused = (m.id == focused_id),
+				}
+			end
+		end
+	end
+
 	monitors.unmap_all_monitors()
 
 	---@type boolean
 	local any_switched = false
-	for _, monitor in ipairs(hl.get_monitors()) do
+	for _, monitor in ipairs(monitor_list) do
 		if monitors.map_monitor(monitor) then
 			any_switched = true
 		end
 	end
 
-	--- If any monitor had to switch workspace (i.e. keep_focused is off, or at
-	--- least one monitor was being initialised for the first time), bring focus
-	--- back to the primary monitor so the session always starts on the right
-	--- screen.  When keep_focused is true and every monitor was already showing
-	--- the correct workspace, no focus change is needed at all.
-	if any_switched then
+	if globals.cfg.keep_focused and next(saved) ~= nil then
+		--- Restore each monitor's visible workspace.  Non-focused monitors are
+		--- restored first so that the final focus() call lands on the monitor
+		--- that was originally focused, leaving the session exactly as the user
+		--- had it before the reload.  Monitors whose saved workspace falls
+		--- outside the new assigned range are skipped (map_monitor already
+		--- focused their start workspace, which is the correct fallback).
+		---@type SMW.SavedMonitorState|nil
+		local restore_focused = nil
+		for _, state in pairs(saved) do
+			---@type number|nil
+			local ws_num = tonumber(state.ws_name)
+			---@type integer
+			local base   = helpers.calc_base_index(state.monitor.name)
+			---@type integer
+			local max_ws = helpers.get_monitor_max_ws(state.monitor.name)
+			local si     = base + 1
+			local ei     = base + max_ws
+			if ws_num and ws_num >= si and ws_num <= ei then
+				if state.is_focused then
+					restore_focused = state
+				else
+					hl.dispatch(hl.dsp.focus({ workspace = state.ws_name }))
+				end
+			end
+		end
+		if restore_focused then
+			hl.dispatch(hl.dsp.focus({ workspace = restore_focused.ws_name }))
+		end
+	elseif any_switched then
+		--- keep_focused is off (or no snapshot was taken): bring focus back to
+		--- the primary monitor so the session always starts on the right screen.
 		---@type HL.Monitor|nil
 		local primary = helpers.get_primary_monitor()
 		if primary then

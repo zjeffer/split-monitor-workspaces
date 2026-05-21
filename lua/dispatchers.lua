@@ -74,6 +74,9 @@ function dispatchers.do_cycle_workspaces(value, no_wrap)
 		monitors_to_cycle = m and { m } or {}
 	end
 
+	---@type HL.Monitor|nil
+	local current_monitor = helpers.get_current_monitor()
+
 	-- For each monitor (or just the current one), find the currently active workspace in its assigned workspace list,
 	-- then switch to the workspace at index + delta, wrapping if necessary.
 	for _, monitor in ipairs(monitors_to_cycle) do
@@ -94,6 +97,8 @@ function dispatchers.do_cycle_workspaces(value, no_wrap)
 		if not idx then goto continue end
 
 		-- Apply the delta to get the target workspace index, wrapping if necessary and if no_wrap is not set.
+		helpers.notify(string.format("[split-monitor-workspaces] Cycling workspace on monitor %s. Delta: %d, Current: %s, Index: %d",
+			monitor.name, delta, active_name, idx))
 		idx = idx + delta
 		if idx < 1 then
 			if no_wrap then goto continue end
@@ -103,19 +108,23 @@ function dispatchers.do_cycle_workspaces(value, no_wrap)
 			idx = 1
 		end
 
-		-- Focus the target workspace. If link_monitors is enabled, also move it to the correct monitor if it's not already there.
+		-- Focus the target workspace. If link_monitors is enabled, also move it to the correct monitor and follow it to ensure all monitors switch together.
 		---@type string
 		local target = ws_list[idx]
-		if globals.cfg.link_monitors then
-			hl.dispatch(hl.dsp.workspace.move({ workspace = target, monitor = monitor.name }))
-			if monitor.focused then
-				hl.dispatch(hl.dsp.focus({ workspace = target }))
-			end
-		else
-			hl.dispatch(hl.dsp.focus({ workspace = target }))
-		end
+		hl.dispatch(hl.dsp.focus({ workspace = target }))
 
 		::continue::
+	end
+
+	if globals.cfg.link_monitors then
+		-- TODO: Hyprland needs a way to change workspaces on other monitors through lua without focusing them (like the C++ plugin did)
+		-- After cycling, ensure the original monitor's workspace is focused again to prevent focus from
+		-- jumping to another monitor.
+		if not current_monitor then
+			error("[split-monitor-workspaces] No current monitor? Cannot switch workspace.")
+			return
+		end
+		hl.dispatch(hl.dsp.focus({ workspace = helpers.get_workspace_from_monitor(current_monitor, value) }))
 	end
 end
 

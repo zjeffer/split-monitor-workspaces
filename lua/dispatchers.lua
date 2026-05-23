@@ -97,8 +97,6 @@ function dispatchers.do_cycle_workspaces(value, no_wrap)
 		if not idx then goto continue end
 
 		-- Apply the delta to get the target workspace index, wrapping if necessary and if no_wrap is not set.
-		helpers.notify(string.format("[split-monitor-workspaces] Cycling workspace on monitor %s. Delta: %d, Current: %s, Index: %d",
-			monitor.name, delta, active_name, idx))
 		idx = idx + delta
 		if idx < 1 then
 			if no_wrap then goto continue end

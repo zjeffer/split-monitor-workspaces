@@ -153,7 +153,7 @@ function monitors.remap_all_monitors()
 	---@field is_focused boolean
 
 	---@type table<integer, SMW.SavedMonitorState>
-	local saved = {}
+	local saved_monitors = {}
 	---@type integer|nil
 	local focused_id = nil
 	if globals.cfg.keep_focused then
@@ -164,7 +164,7 @@ function monitors.remap_all_monitors()
 			---@type HL.Workspace|nil
 			local ws = hl.get_active_workspace(m)
 			if ws then
-				saved[m.id] = {
+				saved_monitors[m.id] = {
 					monitor    = m,
 					ws_name    = ws.name,
 					is_focused = (m.id == focused_id),
@@ -183,7 +183,7 @@ function monitors.remap_all_monitors()
 		end
 	end
 
-	if globals.cfg.keep_focused and next(saved) ~= nil then
+	if globals.cfg.keep_focused and next(saved_monitors) ~= nil then
 		--- Restore each monitor's visible workspace.  Non-focused monitors are
 		--- restored first so that the final focus() call lands on the monitor
 		--- that was originally focused, leaving the session exactly as the user
@@ -192,7 +192,7 @@ function monitors.remap_all_monitors()
 		--- focused their start workspace, which is the correct fallback).
 		---@type SMW.SavedMonitorState|nil
 		local restore_focused = nil
-		for _, state in pairs(saved) do
+		for _, state in pairs(saved_monitors) do
 			---@type number|nil
 			local ws_num = tonumber(state.ws_name)
 			---@type integer
@@ -205,12 +205,24 @@ function monitors.remap_all_monitors()
 				if state.is_focused then
 					restore_focused = state
 				else
-					hl.dispatch(hl.dsp.focus({ workspace = state.ws_name }))
+					--- Only dispatch if the workspace isn't already visible on this monitor.
+					--- Skipping avoids a cursor warp to the non-focused monitor.
+					---@type HL.Workspace|nil
+					local cur = hl.get_active_workspace(state.monitor)
+					if not cur or cur.name ~= state.ws_name then
+						hl.dispatch(hl.dsp.focus({ workspace = state.ws_name }))
+					end
 				end
 			end
 		end
 		if restore_focused then
-			hl.dispatch(hl.dsp.focus({ workspace = restore_focused.ws_name }))
+			--- Only dispatch if the workspace isn't already focused.
+			--- Skipping avoids a cursor warp to the monitor centre on reload.
+			---@type HL.Workspace|nil
+			local cur = hl.get_active_workspace(restore_focused.monitor)
+			if not cur or cur.name ~= restore_focused.ws_name then
+				hl.dispatch(hl.dsp.focus({ workspace = restore_focused.ws_name }))
+			end
 		end
 	elseif any_switched then
 		--- keep_focused is off (or no snapshot was taken): bring focus back to

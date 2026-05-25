@@ -5,8 +5,10 @@
 --- Each function in this module has a corresponding public closure factory
 --- in split-monitor-workspaces.lua that wraps it for use with hl.bind().
 
-local globals = require("globals")
-local helpers = require("helpers")
+local current_path = (...):match("(.-)[^%.]+$") or ""
+local globals      = require(current_path .. "globals")
+local helpers      = require(current_path .. "helpers")
+
 
 local dispatchers = {}
 

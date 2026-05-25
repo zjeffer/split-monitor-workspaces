@@ -2,10 +2,11 @@
 --- Monitor mapping: assigning workspace ranges to monitors and keeping
 --- them in sync when monitors are added, removed, or config is reloaded.
 
-local globals = require("globals")
-local helpers = require("helpers")
+local current_path = (...):match("(.-)[^%.]+$") or ""
+local globals      = require(current_path .. "globals")
+local helpers      = require(current_path .. "helpers")
 
-local monitors = {}
+local monitors     = {}
 
 --- ============================================================
 --- Single-monitor mapping

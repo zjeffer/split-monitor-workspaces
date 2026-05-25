@@ -1,7 +1,11 @@
 --- helpers.lua
 --- Utility functions shared across the split-monitor-workspaces modules.
 
-local globals = require("globals")
+-- local globals = require("globals")
+
+local current_path = (...):match("(.-)[^%.]+$") or ""
+local globals      = require(current_path .. "globals")
+
 local helpers = {}
 
 --- ============================================================

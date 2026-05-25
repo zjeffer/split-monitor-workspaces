@@ -16,11 +16,18 @@ If you're using an older version of Hyprland, or have not yet switched to the ne
 
 ## Installation
 
-Simply clone the repository to a location of your choice, then add the following lines to your Hyprland config:
+Simply clone the repository into your `~/.config/hypr/plugins` directory, and require the package in your Hyprland config.
+
+```sh
+mkdir -p ~/.config/hypr/plugins
+cd ~/.config/hypr/plugins
+git clone https://github.com/zjeffer/split-monitor-workspaces
+```
 
 ```lua
-package.path = package.path .. ";/path/to/split-monitor-workspaces/lua/?.lua"
-local smw = require("split-monitor-workspaces")
+-- somewhere in your Hyprland config
+package.path = package.path .. ";./?.lua;./?/init.lua"
+local smw = require("plugins.split-monitor-workspaces")
 ```
 
 ## Usage

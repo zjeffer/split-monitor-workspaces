@@ -2,12 +2,15 @@
 --- Entry point and public API for the split-monitor-workspaces Lua library.
 --- See example.lua in docs/ for a usage example.
 
-local globals     = require("globals")
-local helpers     = require("helpers")
-local monitors    = require("monitors")
-local dispatchers = require("dispatchers")
+local current_path = (...):match("(.-)[^%.]+$") or ""
+-- these resolve, even if we import smw as a submodule
+local globals      = require(current_path .. "globals")
+local helpers      = require(current_path .. "helpers")
+local monitors     = require(current_path .. "monitors")
+local dispatchers  = require(current_path .. "dispatchers")
 
-local api         = {}
+
+local api = {}
 
 --- ==========================================================
 --- Public API: dispatcher closures compatible with hl.bind()

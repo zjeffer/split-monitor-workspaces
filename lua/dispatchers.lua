@@ -121,7 +121,8 @@ function dispatchers.do_cycle_workspaces(value, no_wrap)
 		---@type string
 		local target = ws_list[idx]
 		-- hl.dispatch(hl.dsp.focus({ workspace = target }))
-		-- If the monitor being cycled is the current monitor, focus the workspace normally. Otherwise use set_workspace to avoid stealing focus from the current monitor.
+		-- If the monitor being cycled is the current monitor, focus the workspace normally.
+		-- Otherwise use set_workspace to avoid stealing focus from the current monitor.
 		if monitor.id == current_monitor.id then
 			hl.dispatch(hl.dsp.focus({ workspace = target }))
 		else

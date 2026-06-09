@@ -2,6 +2,7 @@
 #include "globals.hpp"
 
 #include <hyprland/src/Compositor.hpp>
+#include <hyprland/src/state/MonitorState.hpp>
 #include <hyprland/src/config/lua/bindings/LuaBindingsInternal.hpp>
 #include <hyprland/src/debug/log/Logger.hpp>
 #include <hyprland/src/desktop/state/FocusState.hpp>
@@ -110,7 +111,7 @@ PHLMONITOR getPrimaryMonitor()
 
     // The hyprland config can specify a default monitor to focus on startup, the plugin respects that setting
     if (!g_defaultMonitor.empty()) {
-        for (const PHLMONITOR& monitor : g_pCompositor->m_monitors) {
+        for (const PHLMONITOR& monitor : State::monitorState()->monitors()) {
             if (monitor->m_name == g_defaultMonitor) {
                 Log::logger->log(Log::INFO, "[split-monitor-workspaces] Using default monitor '{}' from config", g_defaultMonitor.c_str());
                 return monitor;
@@ -120,7 +121,7 @@ PHLMONITOR getPrimaryMonitor()
     }
     // default monitor not set, let's use the monitor with the lowest ID
     // but let's first filter out invalid monitors (likely will never happen I assume, but just in case)
-    auto validMonitors = g_pCompositor->m_monitors | std::views::filter([](const PHLMONITOR& m) { return m->m_id != MONITOR_INVALID; });
+    auto validMonitors = State::monitorState()->monitors() | std::views::filter([](const PHLMONITOR& m) { return m->m_id != MONITOR_INVALID; });
     auto const primaryMonitorIt = std::ranges::min_element(validMonitors, std::ranges::less{}, [](const PHLMONITOR& m) { return m->m_id; });
     if (primaryMonitorIt != validMonitors.end()) {
         Log::logger->log(Log::INFO, "[split-monitor-workspaces] Using monitor '{}' with lowest ID {} as primary monitor", (*primaryMonitorIt)->m_name.c_str(), (*primaryMonitorIt)->m_id);

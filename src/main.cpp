@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <hyprland/src/Compositor.hpp>
+#include <hyprland/src/state/MonitorState.hpp>
 #include <hyprland/src/config/ConfigManager.hpp>
 #include <hyprland/src/config/lua/bindings/LuaBindingsInternal.hpp>
 #include <hyprland/src/debug/log/Logger.hpp>
@@ -20,7 +21,7 @@ SDispatchResult splitWorkspace(const std::string& workspace)
     }
     // workspaces are linked => change workspace on all monitors
     std::vector<SDispatchResult> results;
-    for (const PHLMONITOR& monitor : g_pCompositor->m_monitors) {
+    for (const PHLMONITOR& monitor : State::monitorState()->monitors()) {
         bool noFocus = monitor != getCurrentMonitor(); // only focus the current monitor
         auto workspaceRef = g_pCompositor->getWorkspaceByName(getWorkspaceFromMonitor(monitor, workspace));
         if (workspaceRef.get() == nullptr) {
@@ -41,7 +42,11 @@ SDispatchResult cycleWorkspaces(const std::string& value, bool nowrap = false)
         return {.success = false, .error = "Invalid cycle value: " + value};
     }
 
-    auto const monitorsToCycle = g_config.linkMonitors->value() ? g_pCompositor->m_monitors : std::vector<PHLMONITOR>{getCurrentMonitor()};
+    std::vector<PHLMONITOR> monitorsToCycle;
+    if (g_config.linkMonitors->value())
+        monitorsToCycle = State::monitorState()->monitors();
+    else
+        monitorsToCycle = std::vector<PHLMONITOR>{getCurrentMonitor()};
 
     for (const PHLMONITOR& monitor : monitorsToCycle) {
         Log::logger->log(Log::DEBUG, "[split-monitor-workspaces] Cycling workspace on monitor {} (ID {}) by {}", monitor->m_name, monitor->m_id, delta);
@@ -112,7 +117,8 @@ SDispatchResult changeMonitor(bool quiet, const std::string& value)
 
     PHLMONITOR nextMonitor = nullptr;
 
-    uint64_t monitorCount = g_pCompositor->m_monitors.size();
+    const auto& monitorsVec = State::monitorState()->monitors();
+    uint64_t monitorCount = monitorsVec.size();
 
     int const delta = directionToDelta(value);
     if (delta == 0) {
@@ -123,8 +129,8 @@ SDispatchResult changeMonitor(bool quiet, const std::string& value)
     // The index is used instead of the monitorID because using the monitorID won't work if monitors are removed or mirrored
     // as there would be gaps in the monitorID sequence
     int currentMonitorIndex = -1;
-    for (size_t i = 0; i < g_pCompositor->m_monitors.size(); i++) {
-        if (g_pCompositor->m_monitors[i] == monitor) {
+    for (size_t i = 0; i < monitorsVec.size(); i++) {
+        if (monitorsVec[i] == monitor) {
             currentMonitorIndex = i;
             break;
         }
@@ -136,7 +142,7 @@ SDispatchResult changeMonitor(bool quiet, const std::string& value)
 
     int nextMonitorIndex = (monitorCount + currentMonitorIndex + delta) % monitorCount;
 
-    nextMonitor = g_pCompositor->m_monitors[nextMonitorIndex];
+    nextMonitor = monitorsVec[nextMonitorIndex];
 
     int nextWorkspaceID = nextMonitor->m_activeWorkspace->m_id;
 
@@ -312,13 +318,13 @@ void remapAllMonitors()
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Remapping all monitors");
     raiseNotification("[split-monitor-workspaces] Remapping workspaces...");
     unmapAllMonitors();
-    for (const PHLMONITOR& monitor : g_pCompositor->m_monitors) {
+    for (const PHLMONITOR& monitor : State::monitorState()->monitors()) {
         mapMonitor(monitor);
     }
     Log::logger->log(Log::INFO, "[split-monitor-workspaces] Mapped all monitors");
     // if keepFocused is false or first load, switch to the first workspace on the default or first monitor
     if (!g_config.keepFocused->value() || g_firstLoad) {
-        if (!g_pCompositor->m_monitors.empty()) {
+        if (!State::monitorState()->monitors().empty()) {
             PHLMONITOR primaryMonitor = getPrimaryMonitor();
             if (primaryMonitor == nullptr) {
                 Log::logger->log(Log::ERR, "[split-monitor-workspaces] No primary monitor found?");

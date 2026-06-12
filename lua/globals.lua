@@ -13,6 +13,7 @@
 ---@field enable_persistent_workspaces boolean?
 ---@field enable_wrapping boolean?
 ---@field link_monitors boolean?
+---@field toggle_monitor boolean?
 ---@field monitor_priority string[]?
 ---@field max_workspaces table<string, integer>?
 
@@ -46,6 +47,9 @@ globals.cfg = {
 
 	--- If true, switching workspaces changes all monitors simultaneously (Gnome-style).
 	link_monitors = false,
+
+	--- If true, switching to active workspace will focus the next monitor
+	toggle_monitor = false,
 
 	--- List of monitor names in priority order (determines workspace range allocation).
 	--- Monitors not listed get priorities assigned in the order Hyprland reports them.

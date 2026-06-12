@@ -53,7 +53,8 @@ function dispatchers.do_workspace(workspace_str)
 		local resolved = helpers.get_workspace_from_monitor(current_monitor, workspace_str)
 
 		-- If we're already on this workspace, switch to the next monitor
-		if current_monitor.active_workspace
+		if globals.cfg.toggle_monitor
+				and current_monitor.active_workspace
 				and current_monitor.active_workspace.name == resolved then
 			local monitors = hl.get_monitors()
 

@@ -43,7 +43,8 @@ commit_pins = [
     ["af923e30d1d24f1f4a4f5cb8308065173c1d9539", "ba22f56e4a5b42792d212816c722399fc47ce55e"], # 0.55.0
     ["a47147bc095e5b3be3eb8bd04f0ac242b968cd4d", "1f2ec598cb21c62fb403a5a6665a2478f83a4b7e"], # 0.55.1
     ["39d7e209c79d451efab1b21151d5938289da838d", "3aeb50c7fba3141590529b3f1a19dd80d1e77925"], # 0.55.2
-    ["fe5fe79a29ac3adaf3e75560b2f4b7a6d58b31c9", "6cff8cfffecf4729d1f5bacf82d96c5987f230f3"]  # 0.55.3
+    ["fe5fe79a29ac3adaf3e75560b2f4b7a6d58b31c9", "6cff8cfffecf4729d1f5bacf82d96c5987f230f3"], # 0.55.3
+    ["a0136d8c04687bb36eb8a28eb9d1ff92aea99704", "6cff8cfffecf4729d1f5bacf82d96c5987f230f3"]  # 0.55.4
 ]
 
 [split-monitor-workspaces]

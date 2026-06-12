@@ -2,10 +2,12 @@
 #include "globals.hpp"
 
 #include <hyprland/src/Compositor.hpp>
-#include <hyprland/src/state/MonitorState.hpp>
 #include <hyprland/src/config/lua/bindings/LuaBindingsInternal.hpp>
 #include <hyprland/src/debug/log/Logger.hpp>
 #include <hyprland/src/desktop/state/FocusState.hpp>
+#include <hyprland/src/managers/input/InputManager.hpp>
+#include <hyprland/src/state/MonitorState.hpp>
+#include <hyprland/src/state/WorkspaceState.hpp>
 
 #include <algorithm>
 #include <map>
@@ -154,7 +156,7 @@ const std::string& getWorkspaceFromMonitor(const PHLMONITOR& monitor, const std:
     if (workspace == "empty") {
         // get the next workspace ID that is empty on this monitor
         for (const auto& workspaceName : curWorkspaces) {
-            PHLWORKSPACE workspacePtr = g_pCompositor->getWorkspaceByName(workspaceName);
+            PHLWORKSPACE workspacePtr = State::workspaceState()->query().name(workspaceName).run();
             // the workspace we want is either not yet created (=nullptr) or already created but empty (!= nullptr but no windows)
             if (workspacePtr == nullptr || workspacePtr->getWindows() == 0) {
                 return workspaceName;
@@ -218,7 +220,7 @@ PHLMONITOR getCurrentMonitor()
     }
     Log::logger->log(Log::WARN, "[split-monitor-workspaces] Last monitor does not exist, falling back to cursor's monitor");
     // fallback to the monitor the cursor is on
-    return g_pCompositor->getMonitorFromCursor();
+    return State::monitorState()->query().vec(g_pInputManager->getMouseCoordsInternal()).run();
 }
 
 int64_t calcWorkspaceBaseIndex(const std::string& name)

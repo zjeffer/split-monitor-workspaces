@@ -1,9 +1,10 @@
 #include <algorithm>
 #include <hyprland/src/Compositor.hpp>
-#include <hyprland/src/state/MonitorState.hpp>
 #include <hyprland/src/config/ConfigManager.hpp>
 #include <hyprland/src/config/lua/bindings/LuaBindingsInternal.hpp>
 #include <hyprland/src/debug/log/Logger.hpp>
+#include <hyprland/src/state/MonitorState.hpp>
+#include <hyprland/src/state/WorkspaceState.hpp>
 #include <hyprutils/string/VarList2.hpp>
 #include <hyprutils/utils/ScopeGuard.hpp>
 
@@ -23,11 +24,11 @@ SDispatchResult splitWorkspace(const std::string& workspace)
     std::vector<SDispatchResult> results;
     for (const PHLMONITOR& monitor : State::monitorState()->monitors()) {
         bool noFocus = monitor != getCurrentMonitor(); // only focus the current monitor
-        auto workspaceRef = g_pCompositor->getWorkspaceByName(getWorkspaceFromMonitor(monitor, workspace));
+        auto workspaceRef = State::workspaceState()->query().name(getWorkspaceFromMonitor(monitor, workspace)).run();
         if (workspaceRef.get() == nullptr) {
             // create it if it doesn't exist yet
             auto const workspaceID = getWorkspaceIDNameFromString(getWorkspaceFromMonitor(monitor, workspace)).id;
-            workspaceRef = g_pCompositor->createNewWorkspace(workspaceID, monitor->m_id);
+            workspaceRef = State::workspaceState()->create(workspaceID, monitor->m_id);
         }
         monitor->changeWorkspace(workspaceRef, false, true, noFocus);
     }
@@ -76,11 +77,11 @@ SDispatchResult cycleWorkspaces(const std::string& value, bool nowrap = false)
             }
             index = 0; // wrap around to the first workspace
         }
-        auto workspaceRef = g_pCompositor->getWorkspaceByName(workspaces[index]);
+        auto workspaceRef = State::workspaceState()->query().name(workspaces[index]).run();
         if (workspaceRef.get() == nullptr) {
             // create it if it doesn't exist yet
             auto const workspaceID = getWorkspaceIDNameFromString(workspaces[index]).id;
-            workspaceRef = g_pCompositor->createNewWorkspace(workspaceID, monitor->m_id);
+            workspaceRef = State::workspaceState()->create(workspaceID, monitor->m_id);
         }
         monitor->changeWorkspace(workspaceRef, false, true, monitor != getCurrentMonitor());
     }
@@ -227,13 +228,13 @@ void mapMonitor(const PHLMONITOR& monitor) // NOLINT(readability-convert-member-
     for (int i = workspaceIndex; i < workspaceIndex + maxWorkspaces; i++) {
         std::string workspaceName = std::to_string(i);
         g_vMonitorWorkspaceMap[monitor->m_id].push_back(workspaceName);
-        PHLWORKSPACE workspace = g_pCompositor->getWorkspaceByName(workspaceName);
+        PHLWORKSPACE workspace = State::workspaceState()->query().name(workspaceName).run();
 
         // when not using persistent workspaces, we still want to create the first workspace on each monitor
         // to avoid issues where only the last mapped monitor has the correct workspace (#121)
         if (workspace.get() == nullptr && (g_config.enablePersistentWorkspaces->value() || i == workspaceIndex)) {
             Log::logger->log(Log::INFO, "[split-monitor-workspaces] Creating workspace {}", workspaceName);
-            workspace = g_pCompositor->createNewWorkspace(i, monitor->m_id);
+            workspace = State::workspaceState()->create(i, monitor->m_id);
         }
         if (workspace.get() != nullptr) {
             Log::logger->log(Log::INFO, "[split-monitor-workspaces] Moving workspace {} to monitor {}", workspaceName, monitor->m_name);
@@ -271,7 +272,7 @@ void unmapMonitor(const PHLMONITOR& monitor)
 
     if (g_vMonitorWorkspaceMap.contains(monitor->m_id)) {
         for (const auto& workspaceName : g_vMonitorWorkspaceMap[monitor->m_id]) {
-            PHLWORKSPACE workspace = g_pCompositor->getWorkspaceByName(workspaceName);
+            PHLWORKSPACE workspace = State::workspaceState()->query().name(workspaceName).run();
 
             if (workspace.get() != nullptr) {
                 workspace->setPersistent(false);
@@ -297,7 +298,7 @@ void unmapAllMonitors()
     try {
         while (!g_vMonitorWorkspaceMap.empty()) {
             auto [monitorID, workspaces] = *g_vMonitorWorkspaceMap.begin();
-            PHLMONITOR monitor = g_pCompositor->getMonitorFromID(monitorID);
+            PHLMONITOR monitor = State::monitorState()->query().id(monitorID).run();
             if (monitor != nullptr) {
                 unmapMonitor(monitor); // will remove the monitor from the map
             }

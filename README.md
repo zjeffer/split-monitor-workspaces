@@ -30,6 +30,18 @@ package.path = package.path .. ";./?.lua;./?/init.lua"
 local smw = require("plugins.split-monitor-workspaces")
 ```
 
+If you're on the latest Hyprland git commit, simply use the `main` branch. Run `git pull` to get the latest changes every time there is an update.
+If you're on a Hyprland release branch, make sure to checkout the corresponding release branch of this plugin, like so:
+
+```sh
+# if you're on a 0.55 release, simply run this inside the split-monitor-workspaces repo:
+git fetch -Ppft && git checkout release/0.55.x
+# if you want to use a specific release instead of a branch, see the https://github.com/zjeffer/split-monitor-workspaces/tags page for a list of all possible tags. For example:
+git checkout v0.55.4
+```
+
+Make sure you always pull the latest changes with `git pull` when Hyprland has a new minor release, and checkout the new `release/0.XX.x` branch whenever a new major release is created. If there is no release branch yet, create a GitHub issue.
+
 ## Usage
 
 Now that the `smw` package is imported, you can call the `setup()` function with your desired configuration.
@@ -78,15 +90,6 @@ This plugin supports [waybar's](https://github.com/Alexays/Waybar) `hyprland/wor
   },
 ```
 
-## Updating
-
-To update, simply pull the latest changes in the repository, or checkout a specific git tag if you want to update a version matching a Hyprland release.
-
-```bash
-git fetch && git checkout main && git pull
-# or, for a specific tag:
-git fetch && git checkout v0.55.0
-```
 
 It is recommended to do this every time you update Hyprland, to ensure compatibility.
 

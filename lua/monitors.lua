@@ -94,9 +94,10 @@ end
 
 ---@param monitor HL.Monitor
 function monitors.unmap_monitor(monitor)
-	--- Clear persistence rules for this monitor's workspaces so stale rules
-	--- don't cause ensurePersistentWorkspacesPresent to move workspaces around.
-	if globals.cfg.enable_persistent_workspaces then
+	--- Keep persistence rules when reconnect preservation is enabled. Hyprland
+	--- moves the workspaces to a backup monitor on disconnect and restores them
+	--- when the same monitor returns.
+	if globals.cfg.enable_persistent_workspaces and not globals.cfg.restore_workspaces_on_monitor_reconnect then
 		---@type string[]|nil
 		local ws_list = globals.monitor_workspace_map[monitor.id]
 		if ws_list then
@@ -106,10 +107,11 @@ function monitors.unmap_monitor(monitor)
 		end
 	end
 
-	--- remove auto-generated entries so they are recalculated on the next remap
+	--- Keep auto-generated priorities reserved while the monitor is absent so
+	--- other monitors do not move into its workspace range.
 	---@type SMW.PriorityEntry|nil
 	local prio = globals.monitor_priorities[monitor.name]
-	if prio and not prio.from_config then
+	if prio and not prio.from_config and not globals.cfg.restore_workspaces_on_monitor_reconnect then
 		globals.monitor_priorities[monitor.name] = nil
 	end
 

@@ -11,6 +11,7 @@
 ---@field keep_focused boolean?
 ---@field enable_notifications boolean?
 ---@field enable_persistent_workspaces boolean?
+---@field restore_workspaces_on_monitor_reconnect boolean?
 ---@field enable_wrapping boolean?
 ---@field link_monitors boolean?
 ---@field monitor_priority string[]?
@@ -40,6 +41,9 @@ globals.cfg = {
 
 	--- If true, workspaces are kept alive even when empty.
 	enable_persistent_workspaces = true,
+
+	--- If true, keep monitor workspace ranges and persistent rules across reconnects.
+	restore_workspaces_on_monitor_reconnect = false,
 
 	--- If true, cycling past the last/first workspace wraps around.
 	enable_wrapping = true,

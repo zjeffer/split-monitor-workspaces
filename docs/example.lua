@@ -25,6 +25,10 @@ smw.setup({
     --- Keep the currently focused workspace when the config is reloaded (recommended).
     -- keep_focused = true,
 
+    --- Preserve & restore workspace ranges when a monitor briefly disconnects and reconnects.
+    --- This also means you'll see gaps in workspace numbering if an in-between monitor disconnects temporarily.
+    -- restore_workspaces_on_monitor_reconnect = true,
+
     --- Show a Hyprland notification on init and remap.
     -- enable_notifications = false,
 

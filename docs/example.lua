@@ -58,6 +58,14 @@ end
 hl.bind(mainMod .. " + mouse_down", smw.cycle_workspaces("next"))
 hl.bind(mainMod .. " + mouse_up", smw.cycle_workspaces("prev"))
 
+--- Waybar can't access the smw module, but we can use ydotool to trigger F13/F14 keys for on-scroll-up/down events
+--- In your waybar config, you can then set:
+---    "on-scroll-up":   "ydotool key 183:1 183:0", // F13
+---    "on-scroll-down": "ydotool key 184:1 184:0", // F14
+--- the codes don't match because ydotool uses Linux evdev keys, and Hyprland uses xkb keycodes
+hl.bind("code:191", smw.cycle_workspaces("prev")) -- F13
+hl.bind("code:192", smw.cycle_workspaces("next")) -- F14
+
 --- Relative workspace switching using workspace().
 --- "+N" / "-N" jump N workspaces forward/backward from the currently active one.
 --- Wrapping behaviour follows the enable_wrapping config option.

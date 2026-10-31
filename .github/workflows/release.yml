@@ -22,7 +22,7 @@ jobs:
     steps:
     - name: Install dependencies
       run: |
-        sudo -u user sh -c "paru -Syu --noconfirm hyprland meson ninja cpio hyprwayland-scanner hyprutils cmake glaze"
+        sudo -u user sh -c "paru -Syu --noconfirm hyprland meson ninja cpio hyprwayland-scanner hyprutils cmake glaze hyprland-protocols"
 
     - name: Get version from installed Hyprland
       run: |

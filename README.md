@@ -92,8 +92,6 @@ This plugin supports [waybar's](https://github.com/Alexays/Waybar) `hyprland/wor
 ```
 
 
-It is recommended to do this every time you update Hyprland, to ensure compatibility.
-
 # Special thanks
 
 - [@Duckonaut](https://github.com/Duckonaut/): The original creator of this plugin

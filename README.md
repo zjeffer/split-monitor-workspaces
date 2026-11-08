@@ -90,7 +90,38 @@ This plugin supports [waybar's](https://github.com/Alexays/Waybar) `hyprland/wor
     "all-outputs": false // recommended
   },
 ```
+#### Hide unused persistent workspaces
+By default, Waybar displays all persistent workspaces, including those that are currently empty. If you prefer a cleaner Waybar, you can hide unused persistent workspaces using the following code in your `style.css`:
+```css
+/* Hide empty workspaces in Waybar.
+   GTK CSS has no display:none, so empty buttons are shrunk to nothing. */
+#workspaces button.empty,
+#workspaces button.empty label {
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    font-size: 0;
+    opacity: 0;
+}
 
+/* Keep the empty workspace you're currently on visible.
+   Match padding/margin/font-size to your normal workspace button rule. */
+#workspaces button.empty.active,
+#workspaces button.empty.visible {
+    padding: 2px 6px;
+    margin: 1px 2px;
+    opacity: 1;
+}
+
+#workspaces button.empty.active label,
+#workspaces button.empty.visible label {
+    font-size: 15px;
+    opacity: 1;
+}
+```
+**Note:** Adjust `padding`, `margin`, and `font-size` in the active/visible rules to match your existing Waybar styling.
 
 # Special thanks
 
